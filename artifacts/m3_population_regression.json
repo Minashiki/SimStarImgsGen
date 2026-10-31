@@ -1,0 +1,53 @@
+{
+  "note": "\u7b80\u5316\u8bbe\u7f6e\uff1a\u9759\u6b62\u76f8\u673a\u3001\u65e0\u661f\u3001\u5747\u5300\u4f20\u611f\u5668\uff0c\u4e0d\u4f5c\u4e3a\u751f\u4ea7\u9a8c\u6536",
+  "n_sequences": 200,
+  "n_targets": 9725,
+  "mean_visible_per_frame": 40.155,
+  "design_fractions": {
+    "bright": 0.49254498714652956,
+    "faint": 0.25614395886889463,
+    "ultra": 0.2513110539845758
+  },
+  "measured_in_bin_fraction": 0.9325945295313992,
+  "gap_fraction": 0.0487070933466152,
+  "entering": 2548,
+  "exiting": 2478,
+  "truncated_frames": 2172,
+  "never_full": 0,
+  "attempts": 80822,
+  "line_distance_max": 2.997950776617401,
+  "line_distance_histogram": {
+    "edges": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      1.75,
+      2.0,
+      2.25,
+      2.5,
+      2.75,
+      3.0
+    ],
+    "counts": [
+      2308,
+      1082,
+      1604,
+      1887,
+      1303,
+      796,
+      404,
+      198,
+      94,
+      36,
+      9,
+      4
+    ]
+  },
+  "seconds": 223.87663809999867,
+  "workers": 8,
+  "problem_sequences": 0
+}

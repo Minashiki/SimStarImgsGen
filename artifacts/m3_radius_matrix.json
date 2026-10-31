@@ -1,0 +1,17 @@
+{
+  "limit": 1.1,
+  "max_diff": 0.46440134898512603,
+  "max_case": {
+    "sigma0": 1.5,
+    "halo": 0.03,
+    "length": 90.0,
+    "snr": 300.0,
+    "place": "center",
+    "degrees": 0.0,
+    "radius": 14,
+    "diff": 0.46440134898512603
+  },
+  "radius_min": 2,
+  "radius_max": 19,
+  "n_cases": 864
+}

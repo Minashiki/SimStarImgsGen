@@ -1,0 +1,79 @@
+dataset:
+  n_sequences: 500
+  n_frames: 10                 # 整数，或区间如 [8, 16]
+  seed: 20261027
+  out_dir: D:/StarSimData
+  image_format: fits_rice      # fits_rice | png16 | tiff_zstd
+  export_registered: false     # 是否额外导出配准后的图像
+  workers: 12                  # 测试时用 --n-sequences 5 之类覆盖
+  split:
+    mode: sky                  # sky | random
+    fractions: {train: 0.8, val: 0.1, test: 0.1}   # 按序列数
+    caps_per_split: 3          # val、test 各自的球冠数（不共享）
+    cap_radius_deg: 15
+    stratify_by_glat: true     # 球冠按高/中/低银纬分层放置
+    guard_deg: 11.6            # train 序列中间帧光轴到球冠边界的最小距离
+    min_seqs_for_assert: 30    # 每个划分达到此序列数才启用星数对齐硬断言
+timing:
+  frame_interval_s: 1.0
+  exposure_s_nominal: 0.2      # 只作用于静态星、天光和暗电流
+pointing: {min_labeled_stars: 20, galactic_lat_min_deg: null}
+camera_motion: {speed_px_per_frame: [5, 100], accel_px_per_frame2: [-2, 2],
+                jitter_px: [0.0, 0.3], slew_during_exposure: false,
+                reference_frame: middle}   # middle | 整数帧号
+photometry: {mag_limit: [10.5, 12.0], snr_at_limit: 1.5, render_mag_margin: 1.0}
+psf: {sigma_px: [0.7, 1.5], field_growth: [0.0, 0.3], max_ellipticity: 0.2,
+      halo_fraction: [0.0, 0.03]}
+background: {sky_e: [50, 3000], log_uniform: true, gradient_frac: [0, 0.2],
+             smooth_field_frac: [0, 0.1], vignetting_corner: [0, 0.25]}
+sensor_noise: {read_e: [2, 15], dark_e_per_s: [0, 50], prnu: [0.005, 0.02],
+               gain_e_per_adu: [0.5, 3.0], bias_adu: [100, 1000], adc_bits: 16,
+               full_well_e: [30000, 100000], row_col_fpn_e: [0, 2]}
+artifacts:
+  hot_pixel_frac: [2.0e-5, 2.0e-4]
+  hot_cluster_frac: 0.10       # 热像素中 2–3 px 团簇的占比
+  hot_cluster_size_px: [2, 3]
+  rts_frac: 0.05               # 热像素中 RTS 的占比
+  rts_p_flip: [0.1, 0.3]       # 每帧翻转概率，按像素采样
+  dead_pixel_frac: [1.0e-6, 1.0e-5]
+  cosmic_rays_per_frame: [0, 30]
+  blooming: true
+targets:
+  per_frame: [30, 50]
+  streak_fraction: 0.5
+  min_visible_frames: 3        # 真实中心在图内的帧数
+  point:  {speed_px_per_frame: [3, 50],   smear_px: [0.0, 1.0]}
+  streak: {speed_px_per_frame: [20, 100], duty: [0.2, 0.9], min_length_px: 5,
+           angle_jitter_deg: [0, 2]}
+  track_deviation:             # D6，按目标采样
+    strict_fraction: 0.2
+    curve_amp_px: [0, 2]
+    rand_cross_px: [0, 1.0]
+    rand_along_px: [0, 1.0]
+    rand_rel_cap: 0.15         # σ ≤ 0.15·v
+    clip_sigma: 2.5
+    max_track_dev_px: 3.0
+  tiers:                       # 峰值 SNR 区间及占比；[3, 4) 为缓冲带
+    bright: {snr: [10, 300], frac: 0.50}
+    faint:  {snr: [4, 10],   frac: 0.25}
+    ultra:  {snr: [1.5, 3],  frac: 0.25}
+  flux_design_noise: trajectory_mean   # 按轨迹平均局部噪声和 PSF 设计通量
+  brightness_jitter_sigma: 0.1
+labels:
+  save_dense: true
+  label_frame: native          # native | reference
+  canvas: union                # reference 模式下：union | reference
+  stride: 1
+  sigma_hm: 1.0
+  sigma_mode: fixed            # fixed | adaptive
+  per_class_offset: true
+  streak_geom: true
+  streak_line: false
+  motion: false
+  snr_mode: effective          # effective | single
+  label_snr_eff_min: 3.0       # effective 模式
+  label_snr_min: 1.0           # single 模式
+  snr_window: all              # all 或整数帧数
+  blend_search_sigma: 4
+  never_full_policy: label     # label | ignore
+synthetic_faint_stars: {enabled: false, max_snr: 0.5}

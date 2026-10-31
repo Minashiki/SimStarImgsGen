@@ -1,0 +1,8 @@
+sensor:
+  resolution: {width: 4096, height: 4096}
+  pixel_size_mm: 0.009
+  focal_length_mm: 300.0
+  aperture_mm: 150.0
+  spectral_range_nm: {min: 400, max: 800}
+derived:            # 程序计算并覆盖；若手填则只做一致性检查
+  fov_deg: {width: 6.5, height: 6.5}   # 实际计算为 7.032°，将触发警告
