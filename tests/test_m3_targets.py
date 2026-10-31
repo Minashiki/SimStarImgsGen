@@ -32,6 +32,7 @@ from starsim.render import (
     KIND_STREAK,
     RENDER_VERSION,
     _empty_sources,
+    _empty_star_frame,
     _empty_targets,
     _tail_radii_many,
     centers_in_image,
@@ -55,7 +56,6 @@ from starsim.targets import (
 from tests.m3_checks import population_constraint_problems
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT_PATH = ROOT / "artifacts" / "m3_report.json"
 N_SEQUENCES = 200
 _STEP_TOL = 1e-6
 _TIERS = {
@@ -213,15 +213,6 @@ def _paint_stars(sensor, psf, x, y, flux):
     )
 
 
-def _merge_report(updates: dict) -> None:
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    current = {}
-    if REPORT_PATH.exists():
-        current = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
-    current.update(updates)
-    REPORT_PATH.write_text(json.dumps(current, indent=2), encoding="utf-8")
-
-
 def _inside(x: float, y: float, width: int, height: int) -> bool:
     return bool(x >= -0.5 and x < width - 0.5 and y >= -0.5 and y < height - 0.5)
 
@@ -236,7 +227,7 @@ def _population_record(spec: tuple) -> dict:
     psf = _psf(camera, halo_fraction=0.0, field_growth=0.1, max_ellipticity=0.15)
     sensor = _sensor(camera, n_frames=n_frames, sky_e=200.0, dark_e=4.0, read_e=3.0)
     photo = anchor_photometry(11.0, 1.5, 1.0, sensor.reference_sigma(), 0.2)
-    stars = [_empty_sources(camera) for _ in range(n_frames)]
+    stars = tuple(_empty_star_frame(camera, psf) for _ in range(n_frames))
     effective = _effective(per_frame)
     rngs = SequenceRng(sequence_seed(root_seed(20261029), index))
     pop = sample_targets(effective, rngs, camera, motion, psf, photo, sensor, stars)
@@ -593,7 +584,7 @@ def test_exposure_time_does_not_scale_electrons():
     psf = _psf(camera, halo_fraction=0.0, field_growth=0.0, max_ellipticity=0.0)
     sensor = _sensor(camera, n_frames=4)
     photo = anchor_photometry(11.0, 1.5, 1.0, sensor.reference_sigma(), peak_energy_fraction(psf))
-    stars = [_empty_sources(camera) for _ in range(4)]
+    stars = tuple(_empty_star_frame(camera, psf) for _ in range(4))
     pop = sample_targets(
         _effective(4, interval_s=0.2),
         SequenceRng(sequence_seed(root_seed(8), 3)),

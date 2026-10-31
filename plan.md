@@ -373,7 +373,7 @@ p_nom(t)    = p₀ + v·t·û + ½·a_∥·t²·û                      # 名义
 - 偏离幅度按目标采样：
   - `strict_fraction = 0.2`：20% 的目标所有偏离项为 0；
   - 弯曲幅度 A_c ~ U[0, 2] px；
-  - σ_⊥、σ_∥ ~ U[0, 1.0] px，且**不超过 0.15·v**（v = 3 px/帧时上限 0.45 px，避免航向抖动过大退化成随机游走）。下界本身也必须 ≤ 0.15·v 的下界：对每个启用的类别，若 `strict_fraction < 1`，则 `rand_cross_px` 和 `rand_along_px` 的下界都 ≤ `rand_rel_cap` × 该类别速度下界。点状在 `streak_fraction < 1` 时启用，条纹在 `streak_fraction > 0` 时启用。`streak_fraction` 为 0 不检查条纹，为 1 不检查点状；`strict_fraction = 1` 时偏离恒为 0，不检查。只要有一段速度不可行就拒绝整个配置，不在采样时重采。`_capped_uniform` 遇到空交集抛 `ValueError`，不能把下界当成抽中的 σ。`TARGETS_VERSION` = 2，`CONFIG_SAMPLING_VERSION` 不变（默认配置下界为 0，抽样结果不变）；
+  - σ_⊥、σ_∥ ~ U[0, 1.0] px，且**不超过 0.15·v**（v = 3 px/帧时上限 0.45 px，避免航向抖动过大退化成随机游走）。下界本身也必须 ≤ 0.15·v 的下界：对每个启用的类别，若 `strict_fraction < 1`，则 `rand_cross_px` 和 `rand_along_px` 的下界都 ≤ `rand_rel_cap` × 该类别速度下界。点状在 `streak_fraction < 1` 时启用，条纹在 `streak_fraction > 0` 时启用。`streak_fraction` 为 0 不检查条纹，为 1 不检查点状；`strict_fraction = 1` 时偏离恒为 0，不检查。只要有一段速度不可行就拒绝整个配置，不在采样时重采。`_capped_uniform` 遇到真正的空交集抛 `ValueError`，不能把下界当成抽中的 σ；下界只在容差内超过 cap 时取退化区间 [lo, lo]，直接返回下界，不消耗随机数。`TARGETS_VERSION` = 2，`CONFIG_SAMPLING_VERSION` 不变（默认配置下界为 0，抽样结果不变）；
   - 总偏离上限：实际位置到最佳拟合直线的最大距离 ≤ `max_track_dev_px`（默认 3 px），超出则重采样。
 - **所有约束都对实际位置 p(k) 检验**：每一对相邻帧的配准位移落在速度区间内，否则重采样。
 - 暗弱目标的质心测量本身有误差（σ_centroid ≈ σ_psf / SNR），所以设定的偏离不需要很大。
@@ -807,8 +807,7 @@ synthetic_faint_stars: {enabled: false, max_snr: 0.5}
 先冻结基线，再按问题 1→3→4→5 的顺序改。每一步对照上一步的基线。
 
 - **基线（问题 0）。** 用冻结当时的代码跑默认配置 3 条序列（4096²、10 帧，固定根种子和下标，串行）和小图 2 条（512 px，同一 f/p，真实相机运动）。每条记录 population 全部数组和 `attempts`、每帧 `adu` / `saturation_mask` / `saturation_owner` / `fullwell_mask` / `adc_mask` / `s_self` / `sigma_local` / `snr` / `peak_clipped` / `peak_owner` / `center_clipped` / `center_owner` / `blend.group_id`、以及 `rngs.issued` 的 sha256。数组连同字段名、dtype、shape 一起哈希。基线同时记录 `algorithm_versions()`、配置 YAML 和星表缓存的 sha256 与构建参数。一条 slow 测试和一条快速测试在版本号与基线一致时要求逐项相同。半径改完后重新冻结，并注明原因是 `RENDER_VERSION` 3。
-- **帧循环内存（问题 1、8）。** 见 4.6。相对基线逐比特相同，版本号不变。`test_empty_targets_interface_matches_no_targets` 只检查空目标接口；与 M2 的回归由基线承担。
-- **随机偏离支持域（问题 3）和双坐标（问题 6）。** 默认配置相对基线逐比特相同。`TARGETS_VERSION` = 2。
+- **帧循环内存（问题 1、8）、随机偏离支持域（问题 3）和双坐标（问题 6）。** 见 4.6。问题 1 的版本号不变。问题 3 与问题 6 的 `TARGETS_VERSION` = 2。`test_empty_targets_interface_matches_no_targets` 只检查空目标接口；与 M2 的回归由基线承担。重构前后逐比特相同，只在 base 环境（numba 0.60、numpy 1.26.4）下验证过，D12 环境下未验证。已定位的环境差异来自 `np.fft`，相关背景平滑代码不在本轮重构范围内；这不能替代 D12 环境下的重构前后验证。
 - **曝光半径包络（问题 4）。** 连续包络是可以证明的上界，并含离散采样修正。像素差矩阵全部断言 ≤ 0.055σ_ref：σ₀ 取 0.7 和 1.5，晕占比取 0 和 0.03，L 取 smear 0.5、5、20、90，设计 SNR 取 2、30、300，位置取视场中心和视场角（`field_growth` 0.3、椭率 0.2），与径向夹角取 0°、45°、90°，每组 3 个随机亚像素相位。报告最大差、对应组合和各组半径。包络单元测试在线段上随机取点，沿随机方向和距离比较实际 PSF 与 B(r)。5000 星加 50 目标的单帧仍 < 3 s，动目标渲染 ≤ 1 s。
 - **混叠（问题 5）。** 用 `iter_frames` 的接缝传入两颗会混叠的星和一个 bright 档上限的目标。monkeypatch `starsim.sequence.blend_stars`，每帧恰好调用一次，传入的 x、y、flux、radius 和四个 box 与该帧静态星逐比特相同，长度等于 `n_static`。与 population 为空的同一次运行比较 `group_id`。另一次直接把目标传进 `blend_stars`，分组必须改变。
 - **生产统计（问题 2）。** 简化统计改名为 `m3_population_regression`，报告注明「简化设置：静止相机、无星、均匀传感器，不作为生产验收」。生产统计走 `load_config` → `sample_sequence_params` → `simulate_sequence` → `build_sensor` → 光度锚定 → `prepare_sequence` → `iter_frames`。实测档位取 `Exposure.snr[n_static + i]`，只统计中心在图内的目标-帧。轨迹约束与回归共用一个函数。额外检查 `x_c, y_c` 等于 `H_ref→k(x_ref, y_ref)`，逐比特或 ≤ 1e-9 px。workers = min(配置值, ⌊(可用内存 − 3 GiB) / 3 GiB⌋)。报告 `artifacts/m3_production.json`：根种子、序列下标、完整 YAML、星表标识、`algorithm_versions()`、workers、每个 worker 的峰值 RSS、总耗时；目标数、目标-帧数、序列数；每条序列的 N 和平均可见数，以及 `mean − N` 的最小、最大；设计档占比、实测落在设计档的比例、gap 比例；进入、飞出、截断帧、never_full、直线距离直方图、strict 最大残差、步长越界数；问题列表，`problem_sequences` 必须为 0。阈值与上一轮相同：设计档 ±5%，实测 ≥ 85%，每条序列 N ≤ 平均可见数 < N+1，直线距离 ≤ 3 px，strict 残差 < 1e-6，步长 100% 在区间内。

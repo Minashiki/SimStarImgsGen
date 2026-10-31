@@ -30,7 +30,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from starsim.camera import Camera, apply_homography, homography
-from starsim.config import is_interval, sample_log_uniform, sample_uniform
+from starsim.config import exceeds_cap, is_interval, sample_log_uniform, sample_uniform
 from starsim.motion import SequenceMotion
 from starsim.noise import SensorFingerprint
 from starsim.photometry import Photometry
@@ -49,7 +49,11 @@ from starsim.rng import SequenceRng, assert_distinct
 # 1 places tracks in the reference frame, designs flux from the mean local
 # noise and the untruncated unit-stamp peak, and keeps electrons independent
 # of t_exp_eff. Along-track acceleration stays 0.
-# 2：收紧目标生成的支持域，拒绝随机偏离下界超过 0.15·v 的配置。
+# 2 rejects a random-deviation floor above 0.15·v. Boundary comparison unified
+# with config validation (rel_tol=1e-9, abs_tol=0): a floor that exceeds the
+# cap only inside that tolerance returns the floor and draws no random number.
+# A true empty intersection still raises ValueError. The version stays 2
+# because only inputs that used to crash change.
 TARGETS_VERSION = 2
 
 STREAM_POPULATION = "targets/population"
@@ -743,12 +747,23 @@ def _draw_tier(rng, tiers: dict) -> tuple[str, float]:
 
 
 def _capped_uniform(rng, spec, cap: float) -> float:
+    """Draw U[lo, min(hi, cap)], or the floor when it meets the cap on dust.
+
+    A floor above the cap only inside the shared tolerance is the degenerate
+    interval ``[lo, lo]``: return ``lo`` and do not draw. A floor above the
+    cap by more than that tolerance is a true empty intersection and raises
+    before any random number is consumed. The lower bound is not used as a
+    stand-in draw for that empty case.
+    """
     lo, hi = _bounds(spec)
-    upper = min(hi, cap)
-    if upper < lo:
+    if exceeds_cap(lo, cap, rel_tol=1e-9, abs_tol=0.0):
         raise ValueError(
-            f"随机偏离区间与 cap 没有交集：下界 {lo}，上界 {hi}，cap {cap}"
+            "random-deviation interval does not intersect the cap: "
+            f"lower bound {lo}, upper bound {hi}, cap {cap}"
         )
+    if lo > cap:
+        return lo
+    upper = min(hi, cap)
     return sample_uniform(rng, [lo, upper])
 
 

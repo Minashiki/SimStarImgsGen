@@ -11,7 +11,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from starsim import algorithm_versions
 from starsim.attitude import pointing_roll_to_matrix
 from starsim.camera import Camera, apply_homography, homography
 from starsim.catalog import StarCatalog, default_cache_path
@@ -26,8 +25,10 @@ from starsim.render import (
     segment_envelope_brightness,
     star_value_at,
 )
-from starsim.targets import _capped_uniform, _project_track
-from tests.freeze_m3_baseline import OUT, run_one, small_derived
+from starsim.targets import _capped_uniform, _project_track, sample_targets
+from tests.freeze_m3_baseline import FREEZE_REASON, OUT, baseline_problems
+from tests.m3_checks import reference_visible_segment
+from tests.runtime_env import runtime_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -96,9 +97,67 @@ def test_deviation_floor_accepts_exact_cap_and_the_two_exceptions():
 def test_capped_uniform_rejects_an_empty_intersection_before_drawing():
     rng = np.random.default_rng(0)
     state = rng.bit_generator.state
-    with pytest.raises(ValueError, match="没有交集"):
+    with pytest.raises(ValueError, match="does not intersect the cap"):
         _capped_uniform(rng, [0.5, 1.0], 0.45)
     assert rng.bit_generator.state == state
+
+
+def test_capped_uniform_returns_the_floor_inside_tolerance_without_drawing():
+    rng = np.random.default_rng(0)
+    state = rng.bit_generator.state
+    cap = 0.15 * 3.0
+    assert cap < 0.45
+    got = _capped_uniform(rng, [0.45, 1.0], cap)
+    assert got == 0.45
+    assert rng.bit_generator.state == state
+
+
+def test_sample_targets_draws_the_cap_floor(monkeypatch):
+    """The config check and the real cap draw agree on the float-dust boundary."""
+    from starsim.photometry import anchor_photometry
+    from starsim.render import _empty_star_frame
+    from starsim.rng import SequenceRng
+    from tests.test_m3_targets import _camera, _effective, _psf, _sensor, _still_motion
+
+    monkeypatch.setattr("starsim.targets._trunc_normal", lambda rng, sigma, clip: 0.0)
+    gen = _generator()
+    point = gen["targets"]["point"]
+    deviation = gen["targets"]["track_deviation"]
+    point["speed_px_per_frame"] = [3.0, 3.0]
+    gen["targets"]["streak_fraction"] = 0.0
+    deviation["strict_fraction"] = 0.0
+    deviation["curve_amp_px"] = [0.0, 0.0]
+    deviation["rand_cross_px"] = [0.45, 1.0]
+    validate_generator(gen)
+
+    n_frames = 4
+    camera = _camera(256)
+    effective = _effective(2)
+    targets = effective["targets"]
+    targets["per_frame"] = 2
+    targets["streak_fraction"] = 0.0
+    targets["min_visible_frames"] = 3
+    targets["point"]["speed_px_per_frame"] = [3.0, 3.0]
+    targets["track_deviation"]["strict_fraction"] = 0.0
+    targets["track_deviation"]["curve_amp_px"] = [0.0, 0.0]
+    targets["track_deviation"]["rand_cross_px"] = [0.45, 1.0]
+    psf = _psf(camera, sigma0=1.0, field_growth=0.0, max_ellipticity=0.0, halo_fraction=0.0)
+    sensor = _sensor(camera, n_frames=n_frames, sky_e=80.0, dark_e=1.0, read_e=2.0)
+    photo = anchor_photometry(11.0, 1.5, 1.0, sensor.reference_sigma(), 0.2)
+    stars = tuple(_empty_star_frame(camera, psf) for _ in range(n_frames))
+    rngs = SequenceRng(np.random.SeedSequence(7))
+    population = sample_targets(
+        effective,
+        rngs,
+        camera,
+        _still_motion(n_frames),
+        psf,
+        photo,
+        sensor,
+        stars,
+    )
+    assert population.track_id.shape[0] >= 1
+    assert np.all(population.sigma_cross == 0.45)
 
 
 def _frame(psf: PsfModel, x, y, flux, radius) -> StaticStarFrame:
@@ -223,6 +282,14 @@ def test_star_value_at_matches_a_real_star_field():
     assert float(np.max(painted.image[rows[pick], cols[pick]])) > 0.0
 
 
+def test_star_value_at_rejects_a_painted_source_image():
+    from starsim.render import _empty_sources
+
+    sources = _empty_sources(_camera(16, 1000.0))
+    with pytest.raises(TypeError, match="StaticStarFrame"):
+        star_value_at(sources, 0, 0)
+
+
 def test_envelope_bounds_psf_values_on_and_off_the_axis():
     """B(r) is an upper bound, including a segment whose near point is interior."""
     side = 180
@@ -271,7 +338,7 @@ def test_exposure_radius_pixel_matrix_stays_inside_the_noise_bound():
     rng = np.random.default_rng(11)
     worst = 0.0
     worst_case = None
-    radii = []
+    grouped: dict[tuple, list[int]] = {}
     for sigma0 in (0.7, 1.5):
         for halo in (0.0, 0.03):
             for length in (0.5, 5.0, 20.0, 90.0):
@@ -323,7 +390,8 @@ def test_exposure_radius_pixel_matrix_stays_inside_the_noise_bound():
                                 paint_segment(full, x1, y1, x2, y2, flux, psf)
                                 paint_segment(shared, x1, y1, x2, y2, flux, psf, shared_radius=int(radius))
                                 diff = float(np.max(np.abs(full - shared)))
-                                radii.append(int(radius))
+                                key = (sigma0, halo, length, snr, place)
+                                grouped.setdefault(key, []).append(int(radius))
                                 case = {
                                     "sigma0": sigma0,
                                     "halo": halo,
@@ -338,18 +406,115 @@ def test_exposure_radius_pixel_matrix_stays_inside_the_noise_bound():
                                     worst = diff
                                     worst_case = case
                                 assert diff <= limit, case
+    radii = [radius for values in grouped.values() for radius in values]
     report = {
+        "environment": runtime_environment(),
         "limit": limit,
         "max_diff": worst,
         "max_case": worst_case,
         "radius_min": int(min(radii)),
         "radius_max": int(max(radii)),
         "n_cases": len(radii),
+        "groups": [
+            {
+                "sigma0": sigma0,
+                "halo": halo,
+                "length": length,
+                "snr": snr,
+                "place": place,
+                "radii": values,
+            }
+            for (sigma0, halo, length, snr, place), values in grouped.items()
+        ],
     }
     path = ROOT / "artifacts" / "m3_radius_matrix.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     assert worst <= limit
+
+
+def test_per_sample_radius_exceeds_the_noise_bound():
+    """A radius taken from one sample's flux, F/n, cuts a long streak too early."""
+    from starsim.render import paint_segment, render_segment_stamp
+
+    side = 280
+    noise = 20.0
+    sigma0 = 1.5
+    length = 90.0
+    snr = 300.0
+    psf = PsfModel(
+        sigma0=sigma0,
+        field_growth=0.3,
+        max_ellipticity=0.2,
+        halo_fraction=0.03,
+        width=side,
+        height=side,
+        cx=(side - 1) / 2.0,
+        cy=(side - 1) / 2.0,
+    )
+    half = 0.5 * length
+    x1, y1 = psf.cx - half, psf.cy
+    x2, y2 = psf.cx + half, psf.cy
+    _stamp, _r0, _c0, _r1, _c1, _pr, _pc, peak = render_segment_stamp(side, side, x1, y1, x2, y2, 1.0, psf)
+    assert peak > 0.0
+    flux = snr * noise / float(peak)
+    full = np.zeros((side, side))
+    cut = np.zeros_like(full)
+    paint_segment(full, x1, y1, x2, y2, flux, psf)
+    paint_segment(cut, x1, y1, x2, y2, flux, psf, per_sample_noise=noise)
+    assert float(np.max(np.abs(full - cut))) > 0.055 * noise
+
+
+def test_reference_visible_segment_crosses_two_edges():
+    got = reference_visible_segment(-10.0, 8.0, 30.0, 8.0, 16, 16)
+    assert got == pytest.approx((-0.5, 8.0, 15.5, 8.0))
+    assert reference_visible_segment(-10.0, -10.0, -8.0, -8.0, 16, 16) is None
+
+
+def test_boundary_streak_flux_tracks_vis_frac():
+    """In-image flux of a narrow streak tracks vis_frac to order sigma/L."""
+    from starsim.render import paint_segment
+
+    side = 160
+    sigma = 0.7
+    length = 100.0
+    camera = _camera(side, 3000.0)
+    psf = PsfModel(
+        sigma0=sigma,
+        field_growth=0.0,
+        max_ellipticity=0.0,
+        halo_fraction=0.0,
+        width=side,
+        height=side,
+        cx=(side - 1) / 2.0,
+        cy=(side - 1) / 2.0,
+    )
+    mapped = _project_track(
+        np.array([10.0]),
+        np.array([80.0]),
+        np.array([length]),
+        np.array([1.0]),
+        np.array([0.0]),
+        np.zeros(1),
+        [np.eye(3)],
+        camera,
+        True,
+    )
+    vis = float(mapped["vis_frac"][0])
+    assert 0.0 < vis < 1.0
+    flux = 1.0e6
+    image = np.zeros((side, side))
+    paint_segment(
+        image,
+        float(mapped["x1"][0]),
+        float(mapped["y1"][0]),
+        float(mapped["x2"][0]),
+        float(mapped["y2"][0]),
+        flux,
+        psf,
+    )
+    fraction = float(image.sum()) / flux
+    assert abs(fraction - vis) <= 5.0 * sigma / length
 
 
 def test_reference_endpoints_map_onto_native_endpoints():
@@ -395,50 +560,36 @@ def test_reference_endpoints_map_onto_native_endpoints():
     assert gap > 0.0
 
 
-def _baseline_problems(group_name: str) -> list[str]:
-    manifest = json.loads(OUT.read_text(encoding="utf-8"))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        loaded = load_config()
-    catalog = StarCatalog.from_cache(default_cache_path())
-    group = manifest["groups"][group_name]
-    derived = loaded.derived if group_name == "default" else small_derived(loaded.derived)
-    versions_match = algorithm_versions() == manifest["algorithm_versions"]
-    problems = []
-    for record in group["sequences"]:
-        got = run_one(loaded, catalog, derived, record["index"])
-        if versions_match and set(got["population"]) != set(record["population"]):
-            problems.append(f"seq {record['index']} population keys")
-        for key, digest in record["population"].items():
-            if got["population"].get(key) != digest:
-                problems.append(f"seq {record['index']} pop {key}")
-        if got["issued"] != record["issued"] or got["issued_names"] != record["issued_names"]:
-            problems.append(f"seq {record['index']} issued")
-        for index, (got_frame, want_frame) in enumerate(zip(got["frames"], record["frames"])):
-            for key, digest in want_frame.items():
-                if got_frame.get(key) != digest:
-                    problems.append(f"seq {record['index']} frame {index} {key}")
-    return problems
-
-
 def test_small_baseline_matches():
-    assert _baseline_problems("small") == []
+    assert baseline_problems("small") == []
 
 
 @pytest.mark.slow
 def test_default_baseline_matches():
-    assert _baseline_problems("default") == []
+    assert baseline_problems("default") == []
 
 
 def test_static_star_images_match_the_pre_envelope_baseline():
     """Exposure stamps changed. The static-star images did not."""
     previous = json.loads((ROOT / "artifacts" / "m3_baseline" / "manifest_before_render3.json").read_text(encoding="utf-8"))
     current = json.loads(OUT.read_text(encoding="utf-8"))
-    assert "RENDER_VERSION 3" in current["freeze_reason"]
-    for name in ("small", "default"):
-        for old, new in zip(previous["groups"][name]["sequences"], current["groups"][name]["sequences"]):
-            for old_frame, new_frame in zip(old["frames"], new["frames"]):
-                assert old_frame["stars_image"] == new_frame["stars_image"]
+    expected = {"small": [0, 1], "default": [0, 1, 2]}
+    n_frames = 10
+    for name, indices in expected.items():
+        assert current["groups"][name]["freeze_reason"] == FREEZE_REASON
+        old_seqs = previous["groups"][name]["sequences"]
+        new_seqs = current["groups"][name]["sequences"]
+        assert [item["index"] for item in old_seqs] == indices
+        assert [item["index"] for item in new_seqs] == indices
+        old_by_index = {item["index"]: item for item in old_seqs}
+        new_by_index = {item["index"]: item for item in new_seqs}
+        for index in indices:
+            old_frames = old_by_index[index]["frames"]
+            new_frames = new_by_index[index]["frames"]
+            assert len(old_frames) == n_frames
+            assert len(new_frames) == n_frames
+            for frame in range(n_frames):
+                assert old_frames[frame]["stars_image"] == new_frames[frame]["stars_image"]
 
 
 def test_iter_frames_blends_static_stars_only(monkeypatch):
@@ -499,14 +650,17 @@ def test_iter_frames_blends_static_stars_only(monkeypatch):
         assert np.array_equal(args[1], star.y)
         assert np.array_equal(args[2], star.flux_e)
         assert np.array_equal(args[4], star.radius)
-        assert args[0].shape == (2,)
+        n_static = int(frames[frame_index].exposure.n_static)
+        assert args[0].shape[0] == n_static
     for frame_index in range(2):
         kwargs = calls[frame_index * 2]
-        assert np.array_equal(kwargs["box_row0"], frames[frame_index].stars.box_row0)
-        assert np.array_equal(kwargs["box_col0"], frames[frame_index].stars.box_col0)
-        assert np.array_equal(kwargs["box_row1"], frames[frame_index].stars.box_row1)
-        assert np.array_equal(kwargs["box_col1"], frames[frame_index].stars.box_col1)
-        assert kwargs["box_row0"].shape[0] == 2
+        n_static = int(frames[frame_index].exposure.n_static)
+        assert np.array_equal(kwargs["box_row0"], star.box_row0)
+        assert np.array_equal(kwargs["box_col0"], star.box_col0)
+        assert np.array_equal(kwargs["box_row1"], star.box_row1)
+        assert np.array_equal(kwargs["box_col1"], star.box_col1)
+        assert kwargs["box_row0"].shape[0] == n_static
+        assert kwargs["search_sigma"] == plan.search_sigma
     empty = _one_target(camera, bright, (20.0, 24.9), 32.0, count=0)
     empty_rng = SequenceRng(np.random.SeedSequence(5))
     bare = list(iter_frames(plan, empty_rng, sensor, psf, population=empty))

@@ -1,0 +1,26 @@
+{
+  "environment": {
+    "python": "3.12.0",
+    "numpy": "2.5.4",
+    "numba": "0.68.0",
+    "llvmlite": "0.50.0",
+    "scipy": "1.18.1",
+    "cpu": "znver4"
+  },
+  "root_seed": 20261029,
+  "seed_note": "\u8986\u76d6 YAML \u4e2d\u7684 dataset.seed",
+  "peaks_bytes": {
+    "10": 3052912640,
+    "5": 3052224512,
+    "20": 3054800896
+  },
+  "peaks_gib": {
+    "10": 2.8432464599609375,
+    "5": 2.8426055908203125,
+    "20": 2.8450050354003906
+  },
+  "limit_10_bytes": 3221225472,
+  "span_limit_bytes": 314572800,
+  "ten_frame_margin_vs_3gib": 0.052251180013020836,
+  "worker_budget_note": "workers \u6309\u6bcf\u4e2a worker 3 GiB \u4f30\u7b97\u300210 \u5e27\u5cf0\u503c 2.843 GiB\uff0c\u76f8\u5bf9 3 GiB \u7684\u4f59\u91cf\u7ea6 5.2%\u3002"
+}

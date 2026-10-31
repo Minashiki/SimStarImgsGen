@@ -35,7 +35,8 @@ from starsim.psf import MOFFAT_ALPHA_PER_SIGMA, MOFFAT_BETA, PsfModel
 # a record of the old output has been written.
 # 1 is the shared 5× supersampled integral.
 # 2 draws static stars in catalog-index order (D44).
-# 3：动目标曝光半径改用覆盖整条线段 PSF 的径向包络，取点源界与线源界中较小的一个。
+# 3: a moving target's exposure radius is the radial envelope of the PSF
+# along the whole segment, the smaller of the point-source and line-source bounds.
 RENDER_VERSION = 3
 
 SUBSAMPLE = 5
@@ -1073,23 +1074,27 @@ def render_static_stars(
     )
 
 
-def star_value_at(frame_sources, row: int, col: int) -> float:
+def star_value_at(frame_sources: StaticStarFrame, row: int, col: int) -> float:
     """Star light at one pixel, summed in catalog order from 0.
 
     Each term is the product ``_paint`` adds into that pixel, including the
     ``flux × integral`` order inside :func:`integrate_pixel`. Background is
     not added. Stars whose centers lie outside the image still contribute
     when the clipped stamp covers the pixel.
+
+    The argument is a :class:`StaticStarFrame`. A painted
+    :class:`RenderedSources` has no PSF, and this function does not guess one.
     """
-    if int(np.asarray(frame_sources.x).shape[0]) == 0:
+    if not isinstance(frame_sources, StaticStarFrame):
+        raise TypeError(
+            "star_value_at requires a StaticStarFrame, "
+            f"got {type(frame_sources).__name__}"
+        )
+    if int(frame_sources.x.shape[0]) == 0:
         return 0.0
     psf = frame_sources.psf
-    if isinstance(frame_sources, StaticStarFrame):
-        height = int(frame_sources.height)
-        width = int(frame_sources.width)
-    else:
-        height = int(frame_sources.image.shape[0])
-        width = int(frame_sources.image.shape[1])
+    height = int(frame_sources.height)
+    width = int(frame_sources.width)
     return float(
         _value_at_pixel(
             int(row),

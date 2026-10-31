@@ -1,11 +1,13 @@
 """Peak RSS of one worker that drops each frame after a scalar summary.
 
-Run as ``python tests/measure_frame_rss.py`` for n_frames in {10, 5, 20},
-or pass one of those integers to measure just that length.
+The slow test starts one child per length. Each child prints a single JSON
+line. The parent asserts the 10-frame cap and the 5-versus-20 span, then
+writes ``artifacts/m3_memory.json``.
 """
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +15,8 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+from tests.runtime_env import require_genstarimg
 
 
 def measure(n_frames: int) -> int:
@@ -34,6 +38,7 @@ def measure(n_frames: int) -> int:
     from starsim.rng import SequenceRng, root_seed, sequence_seed
     from starsim.sequence import iter_frames, prepare_sequence
 
+    require_genstarimg()
     process = psutil.Process(os.getpid())
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -64,21 +69,24 @@ def measure(n_frames: int) -> int:
         del frame, snr
         gc.collect()
     peak = int(process.memory_info().peak_wset)
-    print(f"n_frames={n_frames} peak_wset={peak} frames={count} snr_sum={total:.6f}", flush=True)
+    print(
+        json.dumps(
+            {
+                "n_frames": int(n_frames),
+                "peak_wset": peak,
+                "frames": count,
+                "snr_sum": total,
+            }
+        ),
+        flush=True,
+    )
     return peak
 
 
 def main() -> None:
-    if len(sys.argv) == 2:
-        measure(int(sys.argv[1]))
-        return
-    peaks = {}
-    for n_frames in (10, 5, 20):
-        subprocess.check_call([sys.executable, str(Path(__file__).resolve()), str(n_frames)])
-        # The child printed the peak. Re-read it by running is enough; the
-        # parent only sequences the children so they do not share a heap.
-        peaks[n_frames] = "see child line"
-    print("done", peaks)
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: python tests/measure_frame_rss.py N_FRAMES")
+    measure(int(sys.argv[1]))
 
 
 if __name__ == "__main__":

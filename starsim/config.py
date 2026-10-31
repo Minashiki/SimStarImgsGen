@@ -1214,6 +1214,16 @@ def _number_span(spec: object) -> tuple[float, float] | None:
     return number, number
 
 
+def exceeds_cap(value: float, cap: float, *, rel_tol: float = 1e-9, abs_tol: float = 0.0) -> bool:
+    """True when ``value`` is above ``cap`` by more than the shared tolerance.
+
+    Config validation and ``targets._capped_uniform`` both call this with
+    ``rel_tol=1e-9`` and ``abs_tol=0``. A floor that is only float dust above
+    the cap is not an empty intersection.
+    """
+    return value > cap and not math.isclose(value, cap, rel_tol=rel_tol, abs_tol=abs_tol)
+
+
 def _check_deviation_floor(gen: dict, problems: list[str]) -> None:
     """Reject a deviation floor above ``rand_rel_cap`` times the class speed floor.
 
@@ -1245,7 +1255,7 @@ def _check_deviation_floor(gen: dict, problems: list[str]) -> None:
             if bounds is None:
                 continue
             floor = bounds[0]
-            if floor > cap and not math.isclose(floor, cap, rel_tol=1e-9, abs_tol=0.0):
+            if exceeds_cap(floor, cap, rel_tol=1e-9, abs_tol=0.0):
                 shown_floor = format(floor, ".12g")
                 shown_cap = format(cap, ".12g")
                 shown_factor = format(cap_factor, ".12g")

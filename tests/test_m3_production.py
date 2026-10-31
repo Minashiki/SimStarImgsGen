@@ -32,6 +32,7 @@ from starsim.rng import SequenceRng, root_seed, sequence_seed
 from starsim.sequence import iter_frames, prepare_sequence
 from starsim.targets import classify_measured_snr
 from tests.m3_checks import population_constraint_problems
+from tests.runtime_env import runtime_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = ROOT / "artifacts" / "m3_production.json"
@@ -198,6 +199,8 @@ def test_m3_production_statistics():
             for item in records
         ],
         "algorithm_versions": algorithm_versions(),
+        "environment": runtime_environment(),
+        "seed_note": "覆盖 YAML 中的 dataset.seed",
         "workers": workers,
         "configured_workers": configured,
         "worker_peak_wset": {str(pid): peak for pid, peak in sorted(peaks.items())},
@@ -225,6 +228,8 @@ def test_m3_production_statistics():
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
     assert report["problem_sequences"] == 0
+    for peak in peaks.values():
+        assert peak <= 3 * GIB
     for item in records:
         assert item["per_frame"] <= item["mean_count"] < item["per_frame"] + 1
     for name, expected in (("bright", 0.50), ("faint", 0.25), ("ultra", 0.25)):

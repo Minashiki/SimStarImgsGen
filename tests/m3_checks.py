@@ -7,9 +7,47 @@ import math
 import numpy as np
 
 from starsim.render import KIND_POINT, KIND_STREAK
-from starsim.targets import clip_segment_to_image, max_line_distance
+from starsim.targets import max_line_distance
 
 _STEP_TOL = 1e-6
+
+
+def reference_visible_segment(x1: float, y1: float, x2: float, y2: float, width: int, height: int):
+    """Visible piece of a segment, from the overlap of the two axis intervals.
+
+    This is not ``clip_segment_to_image``. Each axis contributes the parameter
+    values that stay inside the closed box ``[-0.5, W-0.5] × [-0.5, H-0.5]``;
+    the overlap of those intervals is the visible piece. ``None`` means the
+    segment misses the image.
+    """
+    dx = x2 - x1
+    dy = y2 - y1
+    t_enter = 0.0
+    t_exit = 1.0
+    for origin, delta, low, high in (
+        (x1, dx, -0.5, width - 0.5),
+        (y1, dy, -0.5, height - 0.5),
+    ):
+        if delta == 0.0:
+            if origin < low or origin > high:
+                return None
+            continue
+        t_low = (low - origin) / delta
+        t_high = (high - origin) / delta
+        if delta < 0.0:
+            t_low, t_high = t_high, t_low
+        if t_low > t_enter:
+            t_enter = t_low
+        if t_high < t_exit:
+            t_exit = t_high
+        if t_enter > t_exit:
+            return None
+    return (
+        x1 + t_enter * dx,
+        y1 + t_enter * dy,
+        x1 + t_exit * dx,
+        y1 + t_exit * dy,
+    )
 
 
 def population_constraint_problems(
@@ -88,7 +126,9 @@ def population_constraint_problems(
             x2 = float(pop.x2[i, frame])
             y2 = float(pop.y2[i, frame])
             contained = _inside(x1, y1, width, height) and _inside(x2, y2, width, height)
-            clipped = clip_segment_to_image(x1, y1, x2, y2, width, height)
+            length = math.hypot(x2 - x1, y2 - y1)
+            endpoint_tol = 1e-6 * length
+            clipped = reference_visible_segment(x1, y1, x2, y2, width, height)
             expect = int(pop.kind[i]) == KIND_STREAK and not contained and clipped is not None
             if bool(pop.truncated[i, frame]) != expect:
                 problems.append(f"track {i} frame {frame} truncation flag")
@@ -106,9 +146,21 @@ def population_constraint_problems(
                 if not np.allclose(
                     (pop.vis_x1[i, frame], pop.vis_y1[i, frame], pop.vis_x2[i, frame], pop.vis_y2[i, frame]),
                     clipped,
+                    rtol=0.0,
+                    atol=endpoint_tol,
                 ):
-                    problems.append(f"track {i} frame {frame} visible segment disagrees with the clip")
+                    problems.append(f"track {i} frame {frame} visible segment disagrees with the edge intersection")
                     break
+            native = float(pop.L_native[i, frame])
+            if native > 0.0:
+                expect_frac = float(pop.L_vis[i, frame]) / native
+            elif contained or clipped is not None:
+                expect_frac = 1.0
+            else:
+                expect_frac = 0.0
+            if not np.isclose(float(pop.vis_frac[i, frame]), expect_frac):
+                problems.append(f"track {i} frame {frame} vis_frac is not L_vis / L_native")
+                break
             if clipped is not None or contained:
                 vx1, vy1 = float(pop.vis_x1[i, frame]), float(pop.vis_y1[i, frame])
                 vx2, vy2 = float(pop.vis_x2[i, frame]), float(pop.vis_y2[i, frame])
@@ -120,6 +172,13 @@ def population_constraint_problems(
                 if not np.isclose(pop.L_vis[i, frame], math.hypot(vx2 - vx1, vy2 - vy1)):
                     problems.append(f"track {i} frame {frame} L_vis disagrees with the endpoints")
                     break
+        expect_never = int(pop.kind[i]) == KIND_STREAK and not any(
+            _inside(float(pop.x1[i, frame]), float(pop.y1[i, frame]), width, height)
+            and _inside(float(pop.x2[i, frame]), float(pop.y2[i, frame]), width, height)
+            for frame in range(n_frames)
+        )
+        if bool(pop.never_full[i]) != expect_never:
+            problems.append(f"track {i} never_full")
         if float(pop.accel_along[i]) != 0.0:
             problems.append(f"track {i} has along-track acceleration")
     for frame in range(n_frames):
