@@ -6,7 +6,6 @@ over realizations. Per-realization ratios are not averaged.
 
 from __future__ import annotations
 
-import json
 import math
 import time
 import warnings
@@ -17,6 +16,7 @@ import pytest
 from astropy.io import fits
 from PIL import Image
 from scipy import ndimage
+from tests.report_sections import section_problems, write_section
 
 from starsim.attitude import pointing_roll_to_matrix
 from starsim.camera import Camera, project_icrs, wcs_keywords
@@ -880,8 +880,7 @@ def test_blend_rate_is_the_same_order_as_the_tycho_pair_counts(catalog, camera):
         "screen_psf_halo_fraction": 0.0,
         "screen_vs_full_group_disagreements": group_disagreements,
     }
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    write_section(REPORT_PATH, "blend_rate", report)
     assert len(blended_fractions) >= 30
     median_4 = float(np.median(neighbor[4.0]))
     median_blend = float(np.median(blended_fractions))
@@ -948,12 +947,8 @@ def test_wide_psf_blend_groups_are_reported(catalog, camera):
         "wide_psf_screen_vs_full_group_disagreements": wide_disagreements,
         "wide_psf_blend_rate_median": float(np.median(wide_fractions)) if wide_fractions else None,
     }
-    previous = {}
-    if REPORT_PATH.is_file():
-        previous = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
-    previous.update(extra)
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(json.dumps(previous, indent=2), encoding="utf-8")
+    write_section(REPORT_PATH, "wide_psf", extra)
+    assert section_problems(REPORT_PATH, ("blend_rate", "wide_psf")) == []
     assert wide_fractions
 
 
