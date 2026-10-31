@@ -18,7 +18,8 @@
         "noise": 4,
         "blend": 5,
         "targets": 2,
-        "sequence": 1
+        "sequence": 1,
+        "labels": 3
       },
       "data": {
         "n_fields": 40,
@@ -53,7 +54,8 @@
         "noise": 4,
         "blend": 5,
         "targets": 2,
-        "sequence": 1
+        "sequence": 1,
+        "labels": 3
       },
       "data": {
         "wide_psf_sigma": 1.5,

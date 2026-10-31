@@ -1,0 +1,103 @@
+{
+  "algorithm_versions": {
+    "blend": 5,
+    "config_sampling": 1,
+    "labels": 3,
+    "motion": 2,
+    "noise": 4,
+    "photometry": 1,
+    "psf": 1,
+    "render": 3,
+    "sequence": 1,
+    "targets": 2
+  },
+  "blended": 2773,
+  "candidate_records": 35654,
+  "candidates": 35654,
+  "checked": 11337,
+  "derived_camera": {
+    "K": [
+      [
+        4166.666666666667,
+        0.0,
+        255.5
+      ],
+      [
+        0.0,
+        4166.666666666667,
+        255.5
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "aperture_mm": 150.0,
+    "cx": 255.5,
+    "cy": 255.5,
+    "f_over_p": 4166.666666666667,
+    "focal_length_mm": 37.5,
+    "fov_height_deg": 7.031666391629133,
+    "fov_width_deg": 7.031666391629133,
+    "half_diagonal_deg": 4.96591702349173,
+    "height": 512,
+    "pixel_scale_arcsec": 49.50355349930312,
+    "pixel_size_mm": 0.009,
+    "width": 512
+  },
+  "environment": {
+    "cpu": "znver4",
+    "llvmlite": "0.50.0",
+    "numba": "0.68.0",
+    "numpy": "2.5.4",
+    "python": "3.12.0",
+    "scipy": "1.18.1"
+  },
+  "git_commit": "ad66eba1bf6f6ff2c4027a4fc014dec484cb6009",
+  "git_dirty": false,
+  "labeled": [
+    11337,
+    205,
+    169
+  ],
+  "manifest_valid": true,
+  "max_attitude_error": 1.1102230246251565e-16,
+  "max_candidate_reference_error_px": 3.410605131648481e-13,
+  "max_error_px": 3.410605131648481e-13,
+  "max_homography_error_px": 0.0,
+  "max_reference_error_px": 3.410605131648481e-13,
+  "max_wcs_error_px": 2.7853275241795927e-12,
+  "modules_clean": true,
+  "n_frames": 8,
+  "no_flux": 20007,
+  "reference": {
+    "canvas": "reference",
+    "cropped": 2944,
+    "manifest_valid": true
+  },
+  "render_dense_performance": {
+    "candidates_per_frame": 20,
+    "input_unchanged": true,
+    "measured": true,
+    "seconds": {
+      "128": 0.06274640000265208,
+      "32": 0.019819299999653595,
+      "8": 0.006045400001312373
+    }
+  },
+  "root_seed": 20261031,
+  "sequence_index": 0,
+  "size": [
+    512,
+    512
+  ],
+  "source_records": 39273,
+  "star_sources": 38633,
+  "stride4_collisions": {
+    "count": 37,
+    "cropped": 0,
+    "labeled": 11711,
+    "rate": 0.0031594227649218683
+  }
+}
