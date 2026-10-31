@@ -3,3 +3,4 @@ __pycache__/
 .pytest_cache/
 .numba_cache/
 *.tmp
+/Tycho1/

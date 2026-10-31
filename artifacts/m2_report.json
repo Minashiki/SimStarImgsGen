@@ -10,9 +10,5 @@
   "historical_blend_rate_note": "BLEND_VERSION 2 \u5b9e\u73b0\u5728\u540c\u4e00\u6279 40 \u4e2a\u5929\u533a\u4e0a\u7684\u7ed3\u679c\uff0c\u53ea\u4f9b\u5bf9\u7167\uff0c\u4e0d\u662f\u72ec\u7acb\u57fa\u51c6\uff0c\u4e5f\u4e0d\u53c2\u4e0e\u65ad\u8a00",
   "screen_psf_sigma": 1.0,
   "screen_psf_halo_fraction": 0.0,
-  "screen_vs_full_group_disagreements": 0,
-  "wide_psf_sigma": 1.5,
-  "wide_psf_halo_fraction": 0.03,
-  "wide_psf_screen_vs_full_group_disagreements": 0,
-  "wide_psf_blend_rate_median": 0.011709689287980505
+  "screen_vs_full_group_disagreements": 0
 }

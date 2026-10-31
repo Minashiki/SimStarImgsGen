@@ -219,7 +219,7 @@ def _provenance(catalog: StarCatalog, camera_sha: str, generator_sha: str) -> di
     }
 
 
-def _preflight(group: dict, catalog: StarCatalog, camera_sha: str, generator_sha: str) -> str | None:
+def _preflight(group: dict, catalog: StarCatalog, camera_sha: str, generator_sha: str, side: int) -> str | None:
     reasons = []
     if group.get("environment") != runtime_environment():
         reasons.append("environment")
@@ -231,6 +231,10 @@ def _preflight(group: dict, catalog: StarCatalog, camera_sha: str, generator_sha
         reasons.append("generator_yaml")
     if group.get("catalog") != catalog_identity(catalog):
         reasons.append("catalog")
+    if group.get("root_seed") != BASELINE_ROOT:
+        reasons.append("root_seed")
+    if group.get("side") != side:
+        reasons.append("side")
     if not reasons:
         return None
     return "preflight: " + ", ".join(reasons)
@@ -257,7 +261,8 @@ def baseline_problems(group_name: str) -> list[str]:
     catalog = StarCatalog.from_cache(default_cache_path())
     camera_sha = sha256_file(ROOT / "configs" / "camera_default.yaml")
     generator_sha = sha256_file(ROOT / "configs" / "generator_default.yaml")
-    preflight = _preflight(group, catalog, camera_sha, generator_sha)
+    side = int(loaded.derived.width) if group_name == "default" else 512
+    preflight = _preflight(group, catalog, camera_sha, generator_sha, side)
     if preflight is not None:
         return [preflight]
     n_frames = configured_n_frames(loaded)
@@ -304,6 +309,8 @@ def baseline_problems(group_name: str) -> list[str]:
                     problems.append(f"seq {index} pop {key}")
         if got["issued"] != record.get("issued") or got["issued_names"] != record.get("issued_names"):
             problems.append(f"seq {index} issued")
+        if got["effective"] != record.get("effective"):
+            problems.append(f"seq {index} effective")
         want_frames = record.get("frames")
         if not isinstance(want_frames, list) or len(want_frames) != n_frames or len(got["frames"]) != n_frames:
             problems.append(

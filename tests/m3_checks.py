@@ -127,6 +127,9 @@ def population_constraint_problems(
             y2 = float(pop.y2[i, frame])
             contained = _inside(x1, y1, width, height) and _inside(x2, y2, width, height)
             length = math.hypot(x2 - x1, y2 - y1)
+            if not np.isclose(float(pop.L_native[i, frame]), length):
+                problems.append(f"track {i} frame {frame} L_native disagrees with the endpoints")
+                break
             endpoint_tol = 1e-6 * length
             clipped = reference_visible_segment(x1, y1, x2, y2, width, height)
             expect = int(pop.kind[i]) == KIND_STREAK and not contained and clipped is not None
@@ -151,15 +154,14 @@ def population_constraint_problems(
                 ):
                     problems.append(f"track {i} frame {frame} visible segment disagrees with the edge intersection")
                     break
-            native = float(pop.L_native[i, frame])
-            if native > 0.0:
-                expect_frac = float(pop.L_vis[i, frame]) / native
+            if length > 0.0:
+                expect_frac = float(pop.L_vis[i, frame]) / length
             elif contained or clipped is not None:
                 expect_frac = 1.0
             else:
                 expect_frac = 0.0
             if not np.isclose(float(pop.vis_frac[i, frame]), expect_frac):
-                problems.append(f"track {i} frame {frame} vis_frac is not L_vis / L_native")
+                problems.append(f"track {i} frame {frame} vis_frac disagrees with the endpoint length")
                 break
             if clipped is not None or contained:
                 vx1, vy1 = float(pop.vis_x1[i, frame]), float(pop.vis_y1[i, frame])
