@@ -1,8 +1,8 @@
 # 多帧星图序列仿真器 —— 总体规划（plan.md）
 
-> 版本：v0.18（M4 开工前的标签规则：判定格、像素判据、组 SNR、两层完备性、网格取整、collision） 日期：2026-10-31
+> 版本：v0.20（M4 冻结轮：D67–D73） 日期：2026-10-31
 > 角色分工：我负责总体规划和每个里程碑的审查，你负责实现。
-> 修订历史：v0.1 初稿 → v0.2 确认基本方案 → v0.3 合并四轮标签与数据集设计讨论的结论（D13–D30）→ v0.4 M0 审查：命名随机流与缓存两层校验（D31–D32）→ v0.5 M0 第二轮：`SequenceRng`、AST 扫描、约束表（D33–D35）→ v0.6 M0 第三轮：随机方案版本号、重放入口、扫描器与严格整数 → v0.7 M0 第四轮：显式 null、重放契约、受监控包与哈希顺序 → v0.8 M1 几何审查：运动接受条件与算法版本、角度范围、显示方向 → v0.9 M1 第四轮：浮点跨度有限、整数全程精确并收紧 int64 抽样范围、按模块汇总版本号 → v0.10 M1 第五轮：浮点超大整数改为带路径的有限范围错误；运动在领取 `motion` 流之前完成本轮的浮点转换、有限性、区间顺序、跨度和既有取值约束；`sample_uniform` / `sample_log_uniform` 拒绝非有限标量（公共函数的行为变更：收紧直接调用入口，不递增版本）；`algorithm_versions()` 只返回模块版本，`rng_scheme` 只在 `SequenceRng.metadata()`；`dataset.seed` 的有限浮点上限是明确选定的配置支持范围；收紧相机派生值支持范围（不递增版本）→ v0.11 M1 第六轮：派生值先检查再构造 `K`，同一个根因只报一次；`_to_float_or_overflow` 只表示转换，有限性仍由调用方判断。直接调用 `simulate_sequence` 时字符串和布尔值仍被 `float` 接受，已知、暂缓。→ v0.12 M2 第一轮：饱和链路改为口径 B 的五步（D36）；满阱与 ADC 分开，标签掩码看期望、实际截断只做 QA（D37）；溢流不再设 m < 4 门槛（D38）；来源按像素积分，源级字段改为 `peak_clipped` / `peak_owner`（D39）；混叠改为质心连线、原始成员光场、看谷不数峰（D40、D41）。`NOISE_VERSION` 2→3，`BLEND_VERSION` 2→3；渲染只抽出与 `_paint` 共用的像素积分，像素不变，`RENDER_VERSION` 仍为 1（D42）。→ v0.13 M2 第二轮：光场改为方框筛选后的局部连续求和，不再按 stamp 截断（D40 改写，`BLEND_VERSION` 3→4）；平滑场改为补边后的粗网格生成，尺度 L 是无限平面上的相关长度（D43，`NOISE_VERSION` 3→4）；源顺序按星表索引显式排序，乱序验收分三档（D44）；实际 ADC 与期望掩码的差异计入泊松噪声和读噪（D37 补充）。`RENDER_VERSION`、`PSF_VERSION`、`PHOTOMETRY_VERSION` 保持 1。→ v0.14 M2 第三轮：筛选改为原始端点的半开区间（D40 补充，`BLEND_VERSION` 4→5）；数值输出可能变化就递增版本，与是否已有记录落盘无关（D42）。绘制顺序改为星表索引升序后，电子图像在浮点末位上不同，`RENDER_VERSION` 1→2（D44）。`NOISE_VERSION` = 4、`PSF_VERSION` = 1、`PHOTOMETRY_VERSION` = 1 不变。混叠验收改用独立参考实现，并增加压边回归；报告增加宽 PSF 分组对照。→ v0.15 M2 第四轮审查通过，M2 关闭。M3 开工前的约定：动目标进入曝光链和全局源索引（D45）；动目标的像素贡献与来源（D46）；动目标的 s_self、峰值格和中心格（D47）；条纹按线源折算曝光半径（D48）；动目标电子数与 `t_exp_eff` 的关系（D49，D20 补充）；混叠只针对静态星（D50）；逐帧随机流命名，新增 `TARGETS_VERSION`、`SEQUENCE_VERSION`（D51）。新增待定项 P-7。M2 遗留的小问题写进 M3 第一次提交。→ v0.16 M3 第二轮：帧循环改为 `prepare_sequence` + `iter_frames`，静态星设计噪声改为单点求值，宇宙线率改由 `expose_frame` 的参数传入，数值和随机流保持逐比特（问题 1、8；只在 base 环境下验证过，D12 环境下未验证）。随机偏离下界超过 `0.15·v` 的配置在校验时拒绝，`_capped_uniform` 遇到空交集抛错，`TARGETS_VERSION` 1→2；默认配置的抽样结果不变，`CONFIG_SAMPLING_VERSION` 不变（问题 3）。参考帧与 native 两套几何字段同时保存，新字段不改变已有数值，并入 `TARGETS_VERSION` 2（问题 6）。动目标曝光半径改为覆盖整条线段 PSF 的径向包络，取点源界与线源界中较小的一个，`RENDER_VERSION` 2→3（问题 4，修订 D48）。数量超调的口径写成每条序列 N ≤ 平均可见数 < N+1（问题 7）。生产统计必须走完整入口；简化设置的 200 序列只作为回归（问题 2）。混叠测试必须截获帧循环实际传给 `blend_stars` 的参数（问题 5）。重构前先冻结基线（问题 0），半径改完后按 `RENDER_VERSION` 3 重新冻结。→ v0.17 M3 验收修订：锁定 genstarimg 环境并在测试会话开始时核对；基线按组保存来源，增加传感器哈希，先核对环境、版本、YAML、星表、根种子和尺寸，再检查完整性及逐项结果；冻结全部成功后原子替换；统一方案 B 的 cap 边界；内存与生产 worker 峰值写成断言；增加比较器和冻结失败路径的负向测试，独立检查 native 长度及可见比例。算法版本不变，当前基线因切换到 D12 环境重新冻结。→ v0.18 M4 开工前的标签规则：规则 2 对动目标看中心格，SNR 仍看峰值格（D52，关闭 P-7）；规则 2 统一为判定格被最终组以外的来源截断即 ignore，含缺陷 −1，组级截断标志都以「判定格被截断」为前提（D53，关闭 P-3）；像素层局部极大判据，平台严格相等、按轮冻结后统一合并，原始分组与最终标签分组分开（D54，关闭 P-2）；组 SNR 与按成员集合的跨帧身份（D55）；两层完备性与 `ignore_reason`（D56）；网格取整改用 floor，并定义有效区与 `valid`（D57）；稠密监督优先级与 collision（D58）。所有遍历、求和与平局按规范化源顺序进行。新增 `LABELS_VERSION`；M3 基线增加 `covered_modules`，分两步迁移，不重新冻结。
+> 修订历史：v0.1 初稿 → v0.2 确认基本方案 → v0.3 合并四轮标签与数据集设计讨论的结论（D13–D30）→ v0.4 M0 审查：命名随机流与缓存两层校验（D31–D32）→ v0.5 M0 第二轮：`SequenceRng`、AST 扫描、约束表（D33–D35）→ v0.6 M0 第三轮：随机方案版本号、重放入口、扫描器与严格整数 → v0.7 M0 第四轮：显式 null、重放契约、受监控包与哈希顺序 → v0.8 M1 几何审查：运动接受条件与算法版本、角度范围、显示方向 → v0.9 M1 第四轮：浮点跨度有限、整数全程精确并收紧 int64 抽样范围、按模块汇总版本号 → v0.10 M1 第五轮：浮点超大整数改为带路径的有限范围错误；运动在领取 `motion` 流之前完成本轮的浮点转换、有限性、区间顺序、跨度和既有取值约束；`sample_uniform` / `sample_log_uniform` 拒绝非有限标量（公共函数的行为变更：收紧直接调用入口，不递增版本）；`algorithm_versions()` 只返回模块版本，`rng_scheme` 只在 `SequenceRng.metadata()`；`dataset.seed` 的有限浮点上限是明确选定的配置支持范围；收紧相机派生值支持范围（不递增版本）→ v0.11 M1 第六轮：派生值先检查再构造 `K`，同一个根因只报一次；`_to_float_or_overflow` 只表示转换，有限性仍由调用方判断。直接调用 `simulate_sequence` 时字符串和布尔值仍被 `float` 接受，已知、暂缓。→ v0.12 M2 第一轮：饱和链路改为口径 B 的五步（D36）；满阱与 ADC 分开，标签掩码看期望、实际截断只做 QA（D37）；溢流不再设 m < 4 门槛（D38）；来源按像素积分，源级字段改为 `peak_clipped` / `peak_owner`（D39）；混叠改为质心连线、原始成员光场、看谷不数峰（D40、D41）。`NOISE_VERSION` 2→3，`BLEND_VERSION` 2→3；渲染只抽出与 `_paint` 共用的像素积分，像素不变，`RENDER_VERSION` 仍为 1（D42）。→ v0.13 M2 第二轮：光场改为方框筛选后的局部连续求和，不再按 stamp 截断（D40 改写，`BLEND_VERSION` 3→4）；平滑场改为补边后的粗网格生成，尺度 L 是无限平面上的相关长度（D43，`NOISE_VERSION` 3→4）；源顺序按星表索引显式排序，乱序验收分三档（D44）；实际 ADC 与期望掩码的差异计入泊松噪声和读噪（D37 补充）。`RENDER_VERSION`、`PSF_VERSION`、`PHOTOMETRY_VERSION` 保持 1。→ v0.14 M2 第三轮：筛选改为原始端点的半开区间（D40 补充，`BLEND_VERSION` 4→5）；数值输出可能变化就递增版本，与是否已有记录落盘无关（D42）。绘制顺序改为星表索引升序后，电子图像在浮点末位上不同，`RENDER_VERSION` 1→2（D44）。`NOISE_VERSION` = 4、`PSF_VERSION` = 1、`PHOTOMETRY_VERSION` = 1 不变。混叠验收改用独立参考实现，并增加压边回归；报告增加宽 PSF 分组对照。→ v0.15 M2 第四轮审查通过，M2 关闭。M3 开工前的约定：动目标进入曝光链和全局源索引（D45）；动目标的像素贡献与来源（D46）；动目标的 s_self、峰值格和中心格（D47）；条纹按线源折算曝光半径（D48）；动目标电子数与 `t_exp_eff` 的关系（D49，D20 补充）；混叠只针对静态星（D50）；逐帧随机流命名，新增 `TARGETS_VERSION`、`SEQUENCE_VERSION`（D51）。新增待定项 P-7。M2 遗留的小问题写进 M3 第一次提交。→ v0.16 M3 第二轮：帧循环改为 `prepare_sequence` + `iter_frames`，静态星设计噪声改为单点求值，宇宙线率改由 `expose_frame` 的参数传入，数值和随机流保持逐比特（问题 1、8；只在 base 环境下验证过，D12 环境下未验证）。随机偏离下界超过 `0.15·v` 的配置在校验时拒绝，`_capped_uniform` 遇到空交集抛错，`TARGETS_VERSION` 1→2；默认配置的抽样结果不变，`CONFIG_SAMPLING_VERSION` 不变（问题 3）。参考帧与 native 两套几何字段同时保存，新字段不改变已有数值，并入 `TARGETS_VERSION` 2（问题 6）。动目标曝光半径改为覆盖整条线段 PSF 的径向包络，取点源界与线源界中较小的一个，`RENDER_VERSION` 2→3（问题 4，修订 D48）。数量超调的口径写成每条序列 N ≤ 平均可见数 < N+1（问题 7）。生产统计必须走完整入口；简化设置的 200 序列只作为回归（问题 2）。混叠测试必须截获帧循环实际传给 `blend_stars` 的参数（问题 5）。重构前先冻结基线（问题 0），半径改完后按 `RENDER_VERSION` 3 重新冻结。→ v0.17 M3 验收修订：锁定 genstarimg 环境并在测试会话开始时核对；基线按组保存来源，增加传感器哈希，先核对环境、版本、YAML、星表、根种子和尺寸，再检查完整性及逐项结果；冻结全部成功后原子替换；统一方案 B 的 cap 边界；内存与生产 worker 峰值写成断言；增加比较器和冻结失败路径的负向测试，独立检查 native 长度及可见比例。算法版本不变，当前基线因切换到 D12 环境重新冻结。→ v0.18 M4 开工前的标签规则：规则 2 对动目标看中心格，SNR 仍看峰值格（D52，关闭 P-7）；规则 2 统一为判定格被最终组以外的来源截断即 ignore，含缺陷 −1，组级截断标志都以「判定格被截断」为前提（D53，关闭 P-3）；像素层局部极大判据，平台严格相等、按轮冻结后统一合并，原始分组与最终标签分组分开（D54，关闭 P-2）；组 SNR 与按成员集合的跨帧身份（D55）；两层完备性与 `ignore_reason`（D56）；网格取整改用 floor，并定义有效区与 `valid`（D57）；稠密监督优先级与 collision（D58）。所有遍历、求和与平局按规范化源顺序进行。新增 `LABELS_VERSION`；M3 基线增加 `covered_modules`，分两步迁移，不重新冻结。→ v0.19 M4 审查修订：裁剪与三类归属（D59）、原始 H 校验（D60）、dense 说明文件（D61）、候选 PSF 宽度（D62）、objects schema 1（D63）、`LABELS_VERSION` 2 与验证器（D64）、完整性与字段契约（D65）、写入前预检（D66）。→ v0.20 M4 冻结轮：`LABELS_VERSION` 2→3，offset 改存 float32，精度保证限定 stride 1/4（D67）；渲染顺序、浮点边界、逐点同号与按需完整校验 prev_H（D68）；objects schema 2：候选字段白名单、动目标直接复制唯一成员、空表与表外数组检查（D69）；sequence schema 2：实际派生相机与 sensor 形状预检（D70）、git 来源（D71）；标签性能重构不改结果（D72）；冻结验收（D73）。同步修正 4.7.2 的 SNR 窗口表述、两层完备性漏列 cropped 和决策表断行。
 
 ## 决策记录
 
@@ -63,9 +63,24 @@
 | D53 | 规则 2 与截断标志（P-3） | 规则 2：候选中存在成员的判定格被截断，且 owner 不属于最终标签组（含 −1）→ 整个候选 ignore（`clipped_by_other`）；最终组内成员互相截断不触发。三个标志都以「存在成员的判定格被截断」为前提：`saturated` 是 owner 属于最终组；`in_foreign_sat` 是 owner ≥ 0 且属于组外；`in_defect_sat` 是 owner = −1。来源图的默认值是 −1，未截断的格不能据此判为缺陷截断。三个标志可以同时为真，最终归属只由规则优先级决定。这是保守的可学习性政策：质心和通量是生成真值，不由截断像素估计 | 4.3、4.7 |
 | D54 | 像素判据（P-2） | 在 M3 原始分组之上、标签阶段做，不改 `blend_stars`，`BLEND_VERSION` 仍为 5。先按 D56 提取 `no_flux` 候选，原始组的其余成员构成初始分组。**判定用的图** I：当帧无噪声源光，即静态星加动目标，乘渐晕和 PRNU；不含天光、平滑场、暗电流和缺陷。**参与者**：有有效图内峰值格、且自身贡献为正的静态星，与中心是否在图内无关。动目标只作为 I 的光和主导源候选，不爬坡，也不并组。**平台**：数值严格相等的 8 连通像素，不设容差；平台外的 8 邻域都严格小于它时为极大平台，代表格取平台内行优先最小者。**爬坡**：不是极大平台时，移到平台外严格更大的邻格中值最大者，并列取行优先最小者，直到极大平台。起点已在极大平台上时同样检查主导源。**主导源**：代表格上按 D39 的贡献口径取贡献最大的源，相等时取规范化顺序较小者。**按轮冻结**：每轮冻结分组，对每组算代表成员（`flux_e` 最大，相等取规范化顺序较小者）、代表成员峰值格的爬坡终点、主导源和通量加权质心；主导源是组外静态星、且两组质心距离 d ≤ 2.0·σ_iso（σ_iso 取本组质心处）时记一条并入边；本轮所有边用并查集一次合并，重算后进入下一轮。I 不随合并改变，平台和爬坡终点可以缓存。**不动点**：没有新边时判定，主导源在本组则通过；主导源是动目标，或是组外且 d > 2.0·σ_iso 的静态星，则整个候选 ignore（`pixel_dominated`），记 `dominant_source`。**编号**：`raw_group_id` 不改；最终关系写入 `label_group_id` 和 `components`，`label_group_id` 按最终成员规范化编号元组排序后从 0 分配。**规范化顺序**（D54–D58 通用）：全局源索引（D45：静态星按星表索引升序，动目标按 track_id 升序）。`labels.py` 入口先按它排序，此后所有遍历、成员求和、质心、组光场累加和平局都按这个顺序进行，与输入数组顺序无关。**对 D50 的扩展**：动目标能改变爬坡终点，因此既可能让某一帧的星 ignore，也可能间接改变星的最终标签分组；动目标自身始终不进入静态组。新增 `LABELS_VERSION` = 1 | 4.7 |
 | D55 | 组的 SNR 与跨帧身份 | **组峰值格**：在所有成员图内 stamp 覆盖范围的并集上，按规范化顺序累加原始成员贡献（未乘渐晕和 PRNU），按 D47 的顺序找峰（全图行优先，严格大于才替换）；再乘该格的渐晕和 PRNU 得到 `s_group`。σ_local 沿用 4.3，把 s_self 换成 s_group，即从 E 中扣除整个组在该格的贡献。`snr = s_group / σ_local`，不对成员 SNR 求和，也不用代表成员的 SNR。组峰值格记为 `group_peak_row`、`group_peak_col`，与成员的判定格（D52）分开，不共用 `peak` 字段；单源候选的组峰值格就是它自己的峰值格。**跨帧身份**：静态星候选用按 (TYC1, TYC2) 排序的成员编号元组（建缓存时强制 TYC3 = 1，(TYC1, TYC2) 在缓存内唯一），动目标用 track_id。**SNR_eff 窗口**：窗口内身份完全相同、且候选中心（组为通量加权质心）在图内的帧。规则 2、像素判据等逐帧 ignore 不改变窗口。成员集合不同就是不同的候选，拆分只让各身份的累计帧数减少；稀疏表记录每颗星的身份数和每个身份的累计帧数 | 4.3、4.7 |
-| D56 | 两层完备性 | **源表**完整保存投影和渲染入口产生的全部记录，每条带 `has_flux`。**处理顺序**：保留 `raw_group_id`；`has_flux=false` 且中心在图外的记录各自成为 `ignore/no_flux` 候选，并从原始组中移出（`has_flux=false` 而中心在图内不应出现，出现即报错）；其余成员按原始组进入 D54。**第一层**（源到候选）适用于全部记录：每条记录恰好属于一个候选，各候选的成员集合恰好划分全部记录。**第二层**：稀疏表里每个候选恰好有一个状态，取值为 labeled 或 ignore；稠密渲染时，每个 labeled 候选在每个 stride 和类别下恰好为「保留」或 collision 之一（D58）。`blended` 是候选的属性（成员数 > 1），成员写入 `components`，不是状态。`ignore_reason` 取规则顺序中第一个命中的，取值依次为 `no_flux`、`pixel_dominated`、`clipped_by_other`、`center_outside`、`low_snr`、`never_full`。传感器缺陷不是源 | 4.7 |
+| D56 | 两层完备性 | **源表**完整保存投影和渲染入口产生的全部记录，每条带 `has_flux`。**处理顺序**：保留 `raw_group_id`；`has_flux=false` 且中心在图外的记录各自成为 `ignore/no_flux` 候选，并从原始组中移出（`has_flux=false` 而中心在图内不应出现，出现即报错）；其余成员按原始组进入 D54。**第一层**（源到候选）适用于全部记录：每条记录恰好属于一个候选，各候选的成员集合恰好划分全部记录。**第二层**：稀疏表里每个候选恰好有一个状态，取值为 labeled 或 ignore；稠密渲染时，每个 labeled 候选在每个 stride 和类别下恰好为 retained、collision loser 或 cropped 之一（D58、D59）。`blended` 是候选的属性（成员数 > 1），成员写入 `components`，不是状态。`ignore_reason` 取规则顺序中第一个命中的，取值依次为 `no_flux`、`pixel_dominated`、`clipped_by_other`、`center_outside`、`low_snr`、`never_full`。传感器缺陷不是源 | 4.7 |
 | D57 | 网格取整与有效区 | 编码前减去整数对齐的画布原点 X₀（native 模式 X₀ = 0）：`x' = (x − X₀ + 0.5)/s − 0.5`，`ix = floor(x' + 0.5)`，`ox = x' − ix ∈ [−0.5, 0.5)`；解码 `x = s·(ix + ox + 0.5) − 0.5 + X₀`；y 同理。不用 `round`：Python 的 `round` 是银行家舍入，半整数处偏移会落到 +0.5。**能否标注**看真实有效区域：本帧 native 中心在半开图像 [−0.5, W−0.5) × [−0.5, H−0.5) 内，reference 模式下等价于在该帧真实足迹内；不看 `ceil(W/s)` 得到的网格尺寸。**reference 原生分辨率的 `valid`**：输出像素方块与该帧足迹有正面积重叠为 1。**stride s 的 `valid`**：对所覆盖的原生像素做「任一有效」聚合。native 模式下每个网格格都覆盖有效像素，因此不输出 `valid`。由此保证每个 labeled 候选的峰值格都在 valid 内 | 4.7、4.12 |
 | D58 | 稠密监督优先级与 collision | 同一类别、同一峰值格内有多个 labeled 候选时，保留本帧 `flux_e` 较大者（组为成员 `flux_e` 之和，按规范化顺序累加），相等时取稳定身份较小者（星为成员编号元组的字典序，动目标为 track_id）。记录每个淘汰者与获胜者的对应关系，淘汰者标 `collision`。该格的 heatmap 正样本、offset、`streak_geom`、motion 等回归字段只由获胜者写入。每个类别通道内，labeled 候选的峰值格（heatmap = 1 且 `reg_mask` = 1）不被任何 ignore 覆盖，包括同格的淘汰者和其他 ignore 候选；其余格 ignore 优先于 heatmap 背景值。不同类别互不影响（D16）。`valid` 表示有图像支持，`ignore` 表示该类监督是否参与损失，两者分开存放、分开使用 | 4.7 |
+| D59 | 裁剪与三类归属 | 先重判状态，labeled 中心按连续半开画布边界分出 cropped，剩余按 D58 竞争。retained、collision loser、cropped 两两不交并恰好覆盖 labeled；loser 唯一且最终 winner 在 retained。cropped 支撑与画布交集写本类别 ignore，不写正峰/回归/motion；原有 ignore 不进 cropped。ignore 半开格区间两端都裁剪，正峰优先。精确 H 的默认 union 下 cropped 为空。motion 只要求当前 retained、上一帧同身份且原生中心在图内，不看上一帧画布和状态 | 4.7、docs/m4.md |
+| D60 | 原始 H 校验 | reference 只接受 i/u/f 的 3×3 数组，转 float64 后保持原始尺度；有限且非全零。足迹四角分子分母有限、分母非零同号，映射有限且严格凸；每次中心/端点/上一帧映射也检查分子、分母、商有限。接受全负分母和镜像，不设近退化阈值，失败报错。native 要求精确 I 且禁止 origin/size 键 | docs/m4.md |
+| D61 | dense 说明文件 | 固定 labels_manifest.json，记录输入 sequence/逐帧 objects 哈希、完整生效 cfg、完整算法版本、objects schema、逐帧实际 H 和解析 origin/size/stride、规范 dense 名称/哈希。各帧→sequence→哈希→临时说明文件原子替换。输出目录新建或空，CLI 输入只读并要求独立输出目录；stride 为任意正整数。save_dense=false 不生成说明文件。校验按 sequence motion 长度生成规范文件清单，核对数量/顺序/哈希/版本；只承诺 dense，不承诺 FITS/meta | docs/m4.md |
+| D62 | 候选 PSF 宽度 | 候选 sigma_psf=psf.sigma_iso(x,y)，组取通量加权质心局部值；不是组整体光斑有效宽度，独立于 D54。源字段不变，数值落候选表，重渲染无需 PSF | 4.7 |
+| D63 | objects schema | schema_version=1（v0.20 起由 D69 升为 2），旧格式明确拒绝。sources_stars/points/streaks 保留全局 source_index，合并排序后必须连续无重号。三张源表和三张候选表按表类别、字段名检查整条序列非空表字段集合及 bool/int64/float64/JSON 类别一致，JSON 不比较 Unicode 宽度；空表固定格式且读为空列表。不允许 None 或任何嵌套非有限数，表外数组同样检查。不保证不同序列同类型 | docs/m4.md |
+| D64 | 版本与验证器 | LABELS_VERSION=2（v0.20 起由 D67 升为 3），schema 独立。重生成 M4 和 M2 各段报告。子进程仅检查版本映射结构：dict，str 键，type is int 且非负；父进程严格断言完整 algorithm_versions()。不支持的相机/主点统一 VerificationError 且消息区分 | docs/m4.md |
+| D65 | 完整性与字段契约 | per_class_offset=false、streak_geom=false 暂拒绝；生产分区/身份/归属检查显式异常，-O 下生效。vis_frac=0 时可见几何无效，-1 只是占位。验证器检查几何/WCS/姿态/分区/状态原因配对；不读 dense、不重算规则/SNR、不独立验证动目标原生位置 | docs/m4.md |
+| D66 | 写入前预检 | 创建目录、写文件、迭代前统一 N≥2；plan.stars、sensor.n_frames、effective.dataset.n_frames 一致。motion 逐帧 N、帧间 N−1。population 数组字段必须恰好登记为 (T,) 或 (T,N)，清单见 docs/m4.md；track_id 唯一，T=0 合法，attempts 不查形状。预检失败不留输出；运行中失败可留部分文件 | docs/m4.md |
+| D67 | 标签版本与 dense 存储 | `LABELS_VERSION` 2→3（取代 D64 的版本号），以下变化一次登记。**落盘数值变化**：dense 的 `offset` 改存 float32（`heatmap` 等仍为 float16，`streak_geom`、`motion` 仍为 float32，`H` 仍为 float64）；保存时 offset 的上限从 float16 的 `nextafter(0.5, 0)` 改为 `nextafter(float32(0.5), 0)`；动目标候选的 `x y x_ref y_ref flux_e ra dec` 改为直接复制唯一成员（D69），末位可能变化。**支持范围收紧**：D68 的逐点同号、按需对 prev_H 做完整 D60、可编码索引检查、native 的 dtype 检查；CLI 覆盖后的 cfg 在写任何文件前先过标签配置校验（例如拒绝 NaN 阈值）。**支持范围放宽**：原有 ignore 候选不再计算中心、端点、σ 和 along，原来因这些无用映射报错的输入现在可以成功；已成功输入的结果不受影响。**精度契约**：任意正整数 stride 都可使用；位置 < 0.01 px、L 和 θ < 0.01 的往返保证只覆盖 stride 1 和 4；其他 stride 的误差随 s 增长，来源包括编码、float32 舍入、裁剪和解码运算，不作数值保证。s·2⁻²⁵ 只是裁剪这一步的偏差上界，不是完整往返误差界。**体积**：r2seq 视场实测（3 帧，每帧约 130 个候选，512² 画布），整份 dense 在 stride 1 增加约 6.7%，stride 4 增加约 3.2%，只代表该视场。**派生入口**：说明文件里 config 中的 stride/origin/size（有则查）、顶层 origin/size/stride 与各帧 dense 的对应值必须一致；说明文件缺键或类型不符抛 ValueError，不泄漏 KeyError。按重新渲染逐字节比对的强校验是可选功能，不是冻结条件。**验收**：stride 256、中心 (0.03, 0.03) 往返误差 < 1e-3 px（float16 回归用例，不扩大精度承诺）；转 float32 后恰为 0.5 的 offset 被裁到 float32 上限；stride 1/4 × native/reference 四种组合往返满足上述精度；CLI 传 NaN 阈值时在写任何文件前失败；篡改 `config.stride` 或顶层 origin 后校验拒绝；删掉 `dense` 键报 ValueError | 4.7.3、docs/m4.md |
+| D68 | 映射、边界与渲染顺序 | 细化 D59，加强 D60。**渲染顺序**：(1) 本次 cfg 下为 ignore 的候选直接按成员方框写支撑，不计算中心、端点、σ 和 along，两轮循环都先按此分支；(2) labeled 候选映射中心，求相对坐标 `u = x − X₀`、`v = y − Y₀`；(3) reference 下 u、v 落在连续边界 [−0.5, W−0.5) × [−0.5, H−0.5) 之外的归入 cropped，只写支撑框 ignore，不编码；native 下 labeled 中心越界仍抛 ValueError，native 的 cropped 恒为空；(4) 边界内才编码。边界判断和编码使用同一个浮点 u、v，因此距边界 1 ulp 以内的点可能因 `x − X₀` 的舍入落到边界外而归入 cropped，这是按浮点 u 定义的结果；编码索引不在 [0, Ws) × [0, Hs) 时抛 ValueError（浮点边界保护），该检查只作用于第 (4) 步。**逐点同号**：每次映射（labeled 中心、条纹端点、上一帧中心、ignore 支撑框四角）都要求分子、分母、商有限，分母非零，且分母与所用矩阵原图四角的分母同号；全负分母和镜像照常接受。**prev_H 按需检查**：motion 开启、k > 0，且至少一个当前 retained 候选在上一帧找到同身份、原生中心在图内的候选时，才构造 prev_H，并用上一帧原生宽高调用完整 D60（`validate_homography`）；每帧最多验证一次，本帧复用。上一帧候选的状态不参与条件（D59）。即使上一帧中心在图内，prev_H 的足迹不在同一投影分支时也会拒绝，这登记为支持范围收紧。**native**：H 与 reference 一样先要求 dtype.kind ∈ {i, u, f}，再要求与单位阵精确相等。**验收**：无关的图外 ignore 候选恰在分母零点时整帧成功；labeled 条纹端点越过分母零线时报错；有 motion 需求且 prev_H 不合格时报错，相同矩阵但无需求时正常输出；自定义原点 (−3, 0)、宽 4、中心为 `nextafter(0.5, −1)` 时按浮点 u = 3.5 归入 cropped，不抛 IndexError；宽 1、stride 1、u = `nextafter(0.5, 0)` 时编码得 ix = 1，抛 ValueError；native 下字符串或 bool 单位阵被拒，越界 labeled 中心抛 ValueError；正常 cropped 不触发可编码检查 | 4.7.3、docs/m4.md |
+| D69 | objects schema 2 | schema_version 1→2，缺失或为 1 都按不支持的格式拒绝，不迁移。**候选白名单**：非空候选表的字段集合必须恰好等于下列名单，写入和读取都检查。公共 31 个：`label_group_id class_id members components blended identity stable_key representative_member x y x_ref y_ref flux_e sigma_psf in_image has_flux dominant_source saturated in_foreign_sat in_defect_sat group_peak_row group_peak_col s_group sigma_local snr snr_eff identity_frame_count status_default ignore_reason_default ra dec`。星额外 2 个：`vmag member_identity_counts`。动目标（点、条纹）额外 39 个：`track_id mag_eq tier_design tier_measured duty_eff t_exp_eff x1 y1 x2 y2 x1_ref y1_ref x2_ref y2_ref L_true L_native angle_rad angle_ref x_vis y_vis vis_x1 vis_y1 vis_x2 vis_y2 L_vis vis_frac vis_x1_ref vis_y1_ref vis_x2_ref vis_y2_ref x_vis_ref y_vis_ref L_vis_ref vx_ref vy_ref truncated entering exiting never_full`。从星候选删除：`box catalog_index decision_clipped decision_owner flux_in_image id peak_clipped peak_col peak_owner peak_row raw_group_id s_self source_index tyc1 tyc2`；从动目标候选删除：`box center_clipped center_col center_owner center_row decision_clipped decision_owner flux_in_image id peak_clipped peak_col peak_owner peak_row raw_group_id s_self source_index`。需要时经 `members` 回查源表；`representative_member` 指向通量最大的成员，与原来从首成员继承的字段无关。**动目标单成员**：恰有一个成员；`x y x_ref y_ref flux_e ra dec` 直接复制唯一成员，不经加权计算；这 7 个字段和上面 39 个额外字段必须与该成员逐值相等，写入时检查。`in_image`、`sigma_psf`、`snr` 按候选级定义计算，不在相等清单内。星的单成员候选仍按通量加权质心计算，不作相等承诺。**源表**：不设白名单，非空源表沿用 D63 的序列内字段集合与存储类别一致性检查。**空表**：源表和候选表的空表都固定为零行、dtype 恰为 `[("id", "<U1")]`，写入和读取都严格检查该格式，读回 `[]`，不参与类型登记，也不套用白名单。**表外数组**（写入与读取一致）：`H_to_ref` 为 float64、形状 (3, 3)、元素有限；`frame_index` 为零维整数（dtype.kind ∈ {i, u}）且 ≥ 0；`size` 形状 (2,)、整数、取值为正。每张表内所有行的 `class_id` 等于该表对应的类别。缺表或表外数组不合格时，`load_objects` 抛 ValueError；验证器做同样检查并抛 VerificationError，不再用 `int()` 截断后比较。**验收**：三类非空候选表多一个或少一个字段都被拒；空表格式不符被拒；动目标候选与成员的任一相等字段不同被拒；`frame_index = 0.9`、`size = [32.9, 32.9]`、stars 表 `class_id = 9`、缺表、float32 的 `H_to_ref` 都被读取端和验证器拒绝；星与动目标混合帧往返严格相等；schema 1 文件被拒 | 4.7.1、docs/m4.md |
+| D70 | 相机与 sensor 预检 | sequence.json 的 `schema_version` 1→2。`write_sequence` 显式接收实际使用的 `DerivedCamera`，要求 `Camera.from_derived(derived)` 与传入的 camera 逐字段相等；sequence.json 的 `derived_camera` 只记录这一份，不再写 `config.derived`（不从 Camera 反推，Camera 不含物理像元尺寸）。sensor：`height`、`width`、`cx`、`cy` 与 camera 相同；`background_e vignetting prnu dark_e` 形状为 (H, W)；`row_offset_e` 为 (H,)；`col_offset_e` 为 (W,)；`hot_row hot_col hot_kind hot_level_a hot_level_b hot_p_flip` 为 (n_hot,)；`hot_state` 为 (n_hot, N)；`dead_row dead_col` 为 (n_dead,)；hot 与 dead 的行列坐标为整数且在图像内。这些检查与 D66 一起在建目录、写文件、开始迭代之前完成，失败不留输出。**验收**：camera 与 derived 不一致、任一图像网格数组形状不符、行或列偏置长度不符、`hot_state` 帧数不符、坏像素坐标越界或为浮点，都在写任何文件前被拒；正常序列 `derived_camera` 的宽高等于 `camera` 的宽高 | 4.8、docs/m4.md |
+| D71 | git 来源 | 属于 sequence.json schema 2，报告同样记录。`git_hash` 改为 `git_commit`，并新增 `git_dirty`；git 命令在 `starsim` 包所在目录执行，不依赖当前工作目录。`git_dirty` 按 `git status --porcelain --untracked-files=all -- starsim scripts configs tests` 的输出是否非空判定，包含未跟踪文件，不含 `artifacts/`；`.gitignore` 忽略的文件不计。git 查询失败时两者都记 null，表示来源未知，不得记为 false。`git_dirty` 在生成开始时取得，表示生成前的代码来源；报告文件在生成后被改动不影响它。环境、星表和外部配置的来源由环境记录与输入哈希负责，不能从 git 干净推出。**冻结验收**：报告记录的 `git_commit` 非 null 且 `git_dirty` 为 false；该 commit 是 HEAD 的祖先；从该 commit 到 HEAD，上述四个目录没有差异；验收当下这四个目录也没有未提交或未跟踪的修改。报告单独提交 | 4.8 |
+| D72 | 标签性能 | 每份 cfg 只调用一次 `assign_status`，同一序列各帧共用结果，stride 4 的碰撞统计复用该结果；`render_dense` 的公开语义不变（单独调用时仍自行复制并重判）。`assign_status` 先按身份把各帧记录按帧号升序分组，求和顺序与现有实现相同；星表索引每条序列构建一次；主导源只在方框覆盖代表格的源中查找（爬坡终点的光 > 0，覆盖源中必有正贡献，结果与遍历全部源相同）。结果逐位不变且不消耗随机数，不升版本。**验收**：重构前后默认配置和一次 reference 派生运行的 objects、dense 逐字节相同；调用后调用者传入的稀疏真值未被修改；报告 8/32/128 帧的单次实测耗时，确认不再随帧数立方增长，外推值须注明 | 4.7、docs/m4.md |
+| D73 | M4 冻结验收 | 冻结前：D67–D72 全部实现并通过各自的验收；plan、docs/m4.md 与实现一致。`m4_report.json` 在满足 D71 的代码上生成，并包含：一个含混叠候选的视场（blended > 0）；一次 `canvas: reference` 的派生运行（cropped > 0）；说明文件校验结果；stride 4 碰撞率。`m2_report.json` 各段按新版本重跑。冻结后，任何字段或数值变化都按 D42 升对应版本，不再走审查补丁 | 6 M4 |
 
 ### 尚未关闭
 
@@ -432,31 +447,31 @@ p_nom(t)    = p₀ + v·t·û + ½·a_∥·t²·û                      # 名义
 
 #### 4.7.1 稀疏真值表（唯一真值，必须保存）
 
-每帧一个 `objects_XXX.npz`，三类分别存为结构化数组。**所有被渲染的星表星和动目标都写入**，包括最终会被 ignore 的。
+每帧一个 `objects_XXX.npz`，schema_version=2（D69）；源表为 `sources_stars`、`sources_points`、`sources_streaks`，候选表为 `stars`、`points`、`streaks`，均为结构化数组（D63）。**所有被渲染的星表星和动目标都写入**，包括最终会被 ignore 的。
 
 v0.18 起分两层（D56）：
 - **源表**：每条投影和渲染记录一行，含 `has_flux`、`raw_group_id`、判定格的截断状态与 owner（D52）、所属候选编号。
 - **候选表**：每个标签候选一行（单源或最终标签组），含身份、`components`、`label_group_id`、`group_peak_row/col`（D55）、状态和 `ignore_reason`（D56）、`dominant_source`（D54）。
 
-下表除 `id` 外都是候选级字段；单源候选的字段与源级相同。
+下表是概览，候选表的完整字段名单以 D69 的白名单为准。除 `id` 外都是候选级字段。动目标候选的 `x y x_ref y_ref flux_e ra dec` 和全部动目标额外字段直接复制唯一成员；星候选（包括单成员）按候选级定义计算，不承诺与源级逐值相同（D69）。
 
 | 字段 | 星 | 点目标 | 条纹 | 说明 |
 |---|---|---|---|---|
-| `id` | ✓ | ✓ | ✓ | 星为 TYC1-TYC2；动目标为序列内持久的 track id |
-| `components` | ✓ | | | 混叠星各成员的 TYC 编号 |
+| `id` | ✓ | ✓ | ✓ | 只在源表：星为 TYC1-TYC2，动目标为序列内持久的 track id。候选表不含，改用 `identity`、`components`（动目标另有 `track_id`） |
+| `components` | ✓ | ✓ | ✓ | 星为各成员的 TYC 编号；动目标为唯一成员的 track id |
 | `x, y` | ✓ | ✓ | ✓ | 本帧原生坐标（条纹为真实中心 = `x_c, y_c`） |
 | `x_ref, y_ref` | ✓ | ✓ | ✓ | 参考帧坐标 |
 | `ra, dec` | ✓ | ✓ | ✓ | 星为星表坐标（混叠星为通量加权方向）；动目标为反投影坐标 |
 | `vmag` / `mag_eq` | ✓ | ✓ | ✓ | 混叠星为合成星等 −2.5·log₁₀(Σ10^(−0.4mᵢ)) |
-| `flux_e, s_self, sigma_local, snr, snr_eff` | ✓ | ✓ | ✓ | 4.3 节定义 |
+| `flux_e, s_group, sigma_local, snr, snr_eff` | ✓ | ✓ | ✓ | 4.3 节和 D55 定义；`s_self` 只在源表 |
 | `tier_design, tier_measured` | | ✓ | ✓ | 实测档位含 gap 组 |
-| `x1, y1, x2, y2, L_true, angle` | | | ✓ | 完整条纹（原生坐标） |
-| `x_vis, y_vis, L_vis, vis_frac` | | | ✓ | 图内可见段 |
+| `x1, y1, x2, y2, L_true, L_native, angle_rad`，及 `_ref` 变体 | | ✓ | ✓ | 完整线段（原生坐标；`x1_ref` 等为参考坐标，`angle_ref` 为参考坐标方向） |
+| `x_vis, y_vis, vis_x1, vis_y1, vis_x2, vis_y2, L_vis, vis_frac`，及 `_ref` 变体 | | ✓ | ✓ | 图内可见段；`vis_frac = 0` 时 −1 只是占位（D65） |
 | `vx_ref, vy_ref` | | ✓ | ✓ | 参考坐标下的速度（px/帧） |
 | `duty_eff, t_exp_eff` | | ✓ | ✓ | D20 |
-| `in_image, flux_in_image` | ✓ | ✓ | ✓ | 中心是否在图内；是否有通量落入图内 |
+| `in_image, has_flux` | ✓ | ✓ | ✓ | 候选中心是否在图内；是否有成员通量落入图内。`flux_in_image` 只在源表 |
 | `blended, saturated, in_foreign_sat, in_defect_sat` | ✓ | ✓ | ✓ | 构造式归属所需的标志（D52、D53）。都以「存在成员的判定格被截断」为前提：`saturated` 是 owner 属于最终标签组，`in_foreign_sat` 是 owner ≥ 0 且属于组外，`in_defect_sat` 是 owner = −1。三者可以同时为真。曝光阶段先记下 `peak_*` 和 `center_*`，组关系在像素判据之后才有。`blended` 是候选属性（成员数 > 1） |
-| `truncated, never_full, entering, exiting` | | ✓ | ✓ | |
+| `truncated, never_full, entering, exiting` | | ✓ | ✓ | objects 里的 `entering`、`exiting` 是逐帧事件（本帧在图内而上一帧不在、本帧在图内而下一帧不在）；population 中的同名字段是每个目标的序列级值，两者含义不同 |
 | `status_default, ignore_reason_default` | ✓ | ✓ | ✓ | 按默认渲染配置算出的状态（labeled/ignore）和 ignore 理由（D56），仅供方便查阅 |
 
 **混叠（D18、D40、D41，blend.py）**：只对静态星做；动目标不与星混叠，彼此也不混叠，也不进入星的混叠光场（D50）。
@@ -477,15 +492,15 @@ v0.18 起分两层（D56）：
 1. 其余记录按原始混叠组进入像素判据（D54），得到最终标签组。成员数 > 1 的候选 `blended=1`，这是属性，不是状态。在不动点被判为受外源主导的候选 → **ignore**（`pixel_dominated`）；
 2. 存在成员的判定格被截断，且 owner 不属于最终标签组（含缺陷 −1）→ **ignore**（`clipped_by_other`）。判定格：星为峰值格，动目标为中心格（D52、D53）。`saturated` 不是这条规则的豁免条件；
 3. 候选中心（组为通量加权质心）不在图内（reference 模式下为不在该帧足迹内），但有通量落入图内 → **ignore**（`center_outside`），例如出图条纹的可见部分、图边外 1–2 px 的星。图内暗星并入中心在图外的亮星后整组归 ignore，这是预期行为；
-4. 有效 SNR < 阈值（默认 `snr_mode: effective`、`label_snr_eff_min = 3.0`；单帧模式用 `label_snr_min = 1.0`）→ **ignore**（`low_snr`）。有效 SNR 按候选身份累计（D55），**同一身份在其窗口内的所有帧统一标注或统一归入 ignore**，规则 0–3 这类逐帧规则除外；
+4. 有效 SNR < 阈值（默认 `snr_mode: effective`、`label_snr_eff_min = 3.0`；单帧模式用 `label_snr_min = 1.0`）→ **ignore**（`low_snr`）。有效 SNR 按候选身份累计（D55）。`snr_mode: effective` 且 `snr_window: all` 时，同一身份各帧的 `snr_eff` 相同，SNR 阈值判定在各帧一致；最终状态仍可能因逐帧规则（no_flux、主导源、截断、图内性等）而不同。有限窗口时，各帧按各自的窗口计算 `snr_eff`。`snr_mode: single` 时按逐帧的 `snr` 判定；
 5. `never_full=1` 且 `never_full_policy: ignore` → **ignore**（`never_full`）；
 6. 其余 → **labeled**；
-7. 稠密渲染时，同类候选落入同一峰值格 → 按 D58 保留一个，其余标记 **collision**。
+7. 稠密渲染时，reference 下中心落在所选画布外的 labeled 候选归入 **cropped**（D59、D68），不参与竞争；其余同类候选落入同一峰值格 → 按 D58 保留一个，其余标记 **collision**。native 下没有 cropped。
 
 规则 0–6 与 stride 无关；规则 7 只在渲染时出现，不改动稀疏表。
 
 - **ignore 只作用于该候选所属类别的通道**（D16）：暗星的 ignore 区不会盖住动目标的峰值格。同一类别内，labeled 候选的峰值格不被任何 ignore 覆盖（D58）。
-- **完备性分两层断言**（D56）。第一层：源表的每条记录恰好属于一个候选，各候选的成员集合恰好划分全部记录。第二层：稀疏表里每个候选恰好有一个状态（labeled 或 ignore）；稠密渲染时，每个 labeled 候选在每个 stride 和类别下恰好为「保留」或 collision 之一。热像素、宇宙线、死像素属于传感器缺陷，不是源。
+- **完备性分两层断言**（D56）。第一层：源表的每条记录恰好属于一个候选，各候选的成员集合恰好划分全部记录。第二层：稀疏表里每个候选恰好有一个状态（labeled 或 ignore）；稠密渲染时，每个 labeled 候选在每个 stride 和类别下恰好为 retained、collision loser 或 cropped 之一（D59；native 下 cropped 恒为空）。热像素、宇宙线、死像素属于传感器缺陷，不是源。
 - 归属规则在渲染时执行（阈值、窗口、坐标系都可以在渲染时改变）。`status_default` 只是默认配置下的快照。
 
 #### 4.7.3 稠密标签（派生物，`save_dense` 控制是否落盘）
@@ -494,14 +509,14 @@ v0.18 起分两层（D56）：
 - native：画在各帧自己的图像坐标上，网格大小 `Hs = ceil(H/s)`，`Ws = ceil(W/s)`。
 - reference：画在参考坐标系上，默认使用并集画布（`canvas: union`，见 4.12），也可以选 `canvas: reference`（只用参考帧本身的 W×H 范围）。
 
-**渲染器接口**：`render_dense(objects_seq, frame_k, H_k→target, cfg)`。H 可以是元数据中的精确单应，也可以是**用户自己估计的或加了扰动的单应**：用什么 H 对齐图像，就用同一个 H 画标签。这样也支持“配准扰动”数据增强（给 H 加小的随机误差，提升对真实配准误差的鲁棒性）。
+**渲染器接口**：`render_dense(objects_seq, frame_k, H_k→target, cfg)`。native 只接受精确单位阵且禁止 cfg 的 origin/size 键；reference 按 D60 校验原始 H。reference 的 H 可以是元数据中的精确单应，也可以是**用户自己估计的或加了扰动的单应**：用什么 H 对齐图像，就用同一个 H 画标签。这样也支持“配准扰动”数据增强（给 H 加小的随机误差，提升对真实配准误差的鲁棒性）。
 
 **网格与偏移**：
 - 编码前先减去整数对齐的画布原点 X₀（native 模式 X₀ = 0），解码后再加回（D57）；
 - 连续坐标映射到热力图：`x' = (x − X₀ + 0.5)/s − 0.5`；
 - 峰值格 `ix = floor(x' + 0.5)`；偏移 `ox = x' − ix ∈ [−0.5, 0.5)`。不用 `round`：Python 的银行家舍入在半整数处会让偏移落到 +0.5；
 - 解码：`x = s·(ix + ox + 0.5) − 0.5 + X₀`；
-- 能否标注看真实有效区域（native 半开图像，reference 为该帧真实足迹），不看 `ceil(W/s)` 得到的网格尺寸。
+- 先以 native 半开图像重判 labeled；reference 再按连续画布边界分出 cropped，其余参与竞争（D59），不看 `ceil(W/s)` 得到的网格尺寸。处理顺序、按浮点相对坐标判定边界和可编码索引检查见 D68。
 
 **热力图形态**：
 - 高斯中心放在**整数峰值格**上（CenterNet 风格，峰值格严格为 1.0）；重叠时逐元素取最大值。
@@ -510,7 +525,7 @@ v0.18 起分两层（D56）：
 - 截断条纹（D13）：中心在图内（或该帧足迹内）时，峰值放在**真实中心**，`streak_geom` 用 **L_true 和真实方向**。多帧网络可以从相邻帧推断出被截掉的部分，偏移也在正常值域内。中心在图外时没有峰值。
 - 监督优先级与 collision（D58）：同类同格只保留一个 labeled 候选，正样本和回归字段只由获胜者写入；labeled 峰值格不被 ignore 覆盖；`valid` 与 `ignore` 分开使用。
 
-**输出文件** `labels_XXX.npz`（float16 + 压缩）：
+**输出文件** `labels_XXX.npz`（压缩；`heatmap` 等为 float16，`offset`、`streak_geom`、`motion` 为 float32，`H` 为 float64，见 D67）：
 
 | 数组 | 形状 | 内容 |
 |---|---|---|
@@ -519,6 +534,10 @@ v0.18 起分两层（D56）：
 | `reg_mask` | (3, Hs, Ws) uint8 | 哪些格有偏移（及 streak_geom、motion）监督 |
 | `ignore` | (3, Hs, Ws) uint8 | 按类别的 ignore 区 |
 | `streak_geom` | (3, Hs, Ws) | 只在条纹峰值格有值：[L, cos2θ, sin2θ]，L 单位为原图像素，2θ 编码消除 180° 歧义 |
+| `retained` | (R,) int64 | 按 label_group_id 升序的保留候选 |
+| `collision` | (C, 2) int64 | 每行 loser 与最终 retained winner |
+| `cropped` | (K,) int64 | 按 label_group_id 升序的画布外 labeled 候选；native 恒为空 |
+| `H` | (3, 3) float64 | 本帧实际使用的原始 H；native 为精确单位阵 |
 | `valid` | (Hs, Ws) uint8 | 仅 reference 模式（D57）：原生分辨率下输出像素与该帧足迹有正面积重叠为 1；stride s 下所覆盖的原生像素任一有效即为 1。`valid = 0` 的格所有类别都不参与损失。native 模式下每格都有效，不输出 |
 | `streak_line` | (Hs, Ws) | 可选（默认关）：到线段距离的高斯平台，供分割式监督使用 |
 | `motion` | (3, 2, Hs, Ws) | 可选（默认关，D29）：峰值格上相对上一帧的位移 (x_{k−1} − x_k, y_{k−1} − y_k)，坐标系跟随 `label_frame` |
@@ -529,9 +548,9 @@ v0.18 起分两层（D56）：
 ### 4.8 元数据（metadata.py）
 
 **序列级 `sequence.json`**：
-- 版本号、git hash、序列种子（该序列 `SeedSequence` 的 entropy 和 spawn_key）、所属划分（train/val/test）；
+- 版本号、`git_commit` 与 `git_dirty`（D71）、序列种子（该序列 `SeedSequence` 的 entropy 和 spawn_key）、所属划分（train/val/test）；
 - `config_unsampled`：合并后、抽样前的配置；`config_effective`：生效副本。不另存 `sampled_paths`；
-- 相机内参和派生参数、全部噪声和 PSF 采样值、光度零点 ZP；
+- 相机内参和实际使用的派生相机参数（D70）、全部噪声和 PSF 采样值、光度零点 ZP；
 - `exposure_s_nominal`（注明只作用于静态星、天光和暗电流）、`target_morphology_model: "per_target_duty_nonphysical"`；
 - 相机运动参数（转轴、角速度、加速度、像面方向）、参考帧编号，以及 4.2 的版本：`rng_scheme` 只来自 `SequenceRng.metadata()`，`algorithm_versions` 只来自 `algorithm_versions()` 的返回值（`config_sampling` 与 `motion`）。键集合和每个 `type is int` 的版本值都必须与当前代码一致，不匹配则整条记录拒绝。`rng_scheme` 不在 `algorithm_versions()` 里，所以不会写两份；
 - 并集画布：整数平移 (ox, oy)、画布尺寸 (Wc, Hc)、每帧的 `H_k→canvas` 和足迹四边形；
@@ -852,7 +871,7 @@ synthetic_faint_stars: {enabled: false, max_snr: 0.5}
     - 预览 PNG 停止跟踪，保留生成代码；
     - 先写 Tycho 原始文件的获取说明（来源、文件名、字节数、`source_sha256`、放置路径），再决定是否停止跟踪 `Tycho1.mat`。
 - 验收：
-  - **完备性断言**（D56）：两层分别断言。每条源记录恰好属于一个候选，各候选成员集合恰好划分全部记录；每个候选恰好有一个状态，`ignore_reason` 是规则顺序中第一个命中的；稠密渲染时每个 labeled 候选在每个 stride 和类别下恰好为保留或 collision。`has_flux=false` 且中心在图外的记录仍有 `ignore/no_flux` 归属，不从稀疏表中消失。
+  - **完备性断言**（D56）：两层分别断言。每条源记录恰好属于一个候选，各候选成员集合恰好划分全部记录；每个候选恰好有一个状态，`ignore_reason` 是规则顺序中第一个命中的；稠密渲染时每个 labeled 候选在每个 stride 和类别下恰好为 retained、collision loser 或 cropped 之一（native 下 cropped 恒为空）。`has_flux=false` 且中心在图外的记录仍有 `ignore/no_flux` 归属，不从稀疏表中消失。
   - **像素判据**（D54）：构造用例固定 PSF、通量比和亚像素相位，先断言前提（起点是否局部极大、爬坡终点在哪一格），再断言结果。覆盖：并组；翼上归 ignore；两颗等亮星形成平顶；平台另一端还有更高像素；起点已是局部极大但主导源是他源；动目标经过暗星的那一帧星归 ignore；图内暗星并入中心在图外的亮星后整组因规则 3 归 ignore。
   - **确定性**：打乱源的输入顺序后，成员划分、`label_group_id`、代表成员、组质心、组通量、`s_group`、状态和 `ignore_reason` 逐比特相同。
   - **截断标志**（D53）：未截断格的 owner 默认为 −1 时不报 `in_defect_sat`；三个标志同时为真时，归属按规则优先级决定；最终组内互相截断不触发规则 2。
@@ -862,7 +881,7 @@ synthetic_faint_stars: {enabled: false, max_snr: 0.5}
   - **M3 基线迁移**：迁移前后每条序列记录的规范化 JSON 哈希不变；新增 `labels` 版本不影响 M3 比较器；`covered_modules` 多一个、少一个、重复或被覆盖模块的版本不一致，都报前置失败。
   - **往返测试**：稀疏表 → 稠密标签 → 3×3 NMS 找峰 + 偏移解码 → 稀疏表，逐字段比对可恢复字段（类别、位置、条纹 L 和 θ）。位置误差 < 0.01 px，L 和 θ 误差 < 0.01；被淘汰的碰撞目标与 `collision` 标记一一对应。覆盖 stride 1 和 stride 4、native 和 reference（并集画布）四种组合。
   - **按类别 ignore**：构造“暗星 ignore 区与动目标峰值格重叠”的情形，动目标通道不受影响。
-  - **有效 SNR 一致性**：同一身份在其窗口内的所有帧归属一致（规则 0–3 这类逐帧规则除外）。
+  - **有效 SNR 一致性**：`snr_mode: effective` 且 `snr_window: all` 时，同一身份各帧的 `snr_eff` 相同、SNR 阈值判定一致，最终状态仍可因逐帧规则不同；有限窗口时各帧按各自窗口计算 `snr_eff`。
   - **reference 模式**：`valid` 掩码与足迹四边形一致；足迹外没有 labeled 目标；传入扰动后的 H 时，标签与用同一 H 变换的图像对齐。
   - 截断条纹：中心在图内时峰值位于真实中心、`streak_geom` 为 L_true；中心在图外时无峰值、可见段在条纹通道为 ignore。
   - 运动通道（开启时）：解码出的位移与稀疏表相邻帧位置之差 < 0.01 px；`motion_mask` 正确屏蔽首帧和刚进入的目标。
@@ -873,6 +892,11 @@ synthetic_faint_stars: {enabled: false, max_snr: 0.5}
     - 只实现元数据实际声明的针孔模型，遇到不支持的模型直接报错，不为验证器新增畸变实现；
     - 测试在新子进程中运行，只提供一个包含这些落盘文件的临时目录。子进程在验证结束时于内部检查 `sys.modules` 中没有 `starsim` 和任何 `starsim.*`，结果以 JSON 返回父进程。
   - FITS 文件在 DS9/astropy 中打开后，WCS 坐标正确。
+
+#### M4 冻结轮（v0.20）
+- 契约以 D67–D73 为唯一依据，实现修改清单从这些条目提取，不另立规范。
+- 每条决策自带验收条件；全部通过后按 D73 生成冻结报告并冻结 M4。
+- docs/m4.md 在实现时同步到 D67–D73。
 
 ### M5 批量生成工程化与数据集划分（约 2 天）
 - 内容：`generate.py` CLI、`split.py`、多进程、种子、断点续跑、`dataset.json`。

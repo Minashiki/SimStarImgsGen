@@ -737,11 +737,33 @@ def validate_generator(gen: dict) -> None:
     _apply_constraints(gen, _CONSTRAINTS, problems)
     _apply_enums(gen, _ENUMS, problems)
     _apply_bools(gen, _BOOL_PATHS, problems)
+    labels = gen.get("labels")
+    if isinstance(labels, dict):
+        for key in ("per_class_offset", "streak_geom"):
+            if labels.get(key) is False:
+                problems.append(f"labels.{key}: false is not supported")
     for checker in _CUSTOM_DISPATCH.values():
         checker(gen, problems)
     _apply_generator_relations(gen, problems)
     if problems:
         raise ValueError("generator 配置校验失败：\n" + "\n".join(problems))
+
+
+def validate_label_cfg(cfg):
+    """Apply the generator label contract to derived CLI overrides."""
+    if not isinstance(cfg, dict):
+        raise ValueError("labels must be a mapping")
+    gen = {"labels": cfg}
+    problems = []
+    _apply_constraints(gen, {p: v for p, v in _CONSTRAINTS.items() if p[0] == "labels"}, problems)
+    _apply_enums(gen, {p: v for p, v in _ENUMS.items() if p[0] == "labels"}, problems)
+    _apply_bools(gen, {p for p in _BOOL_PATHS if p[0] == "labels"}, problems)
+    _check_snr_window(gen, problems)
+    for key in ("per_class_offset", "streak_geom"):
+        if cfg.get(key) is False:
+            problems.append(f"labels.{key}: false is not supported")
+    if problems:
+        raise ValueError("labels 配置校验失败：\n" + "\n".join(problems))
 
 
 def validate_camera(camera: dict) -> None:

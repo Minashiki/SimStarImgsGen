@@ -28,6 +28,7 @@ from starsim.render import RENDER_VERSION
 from starsim.rng import SequenceRng, root_seed, sequence_seed
 from starsim.sequence import SEQUENCE_VERSION
 from starsim.targets import TARGETS_VERSION
+from starsim.labels import LABELS_VERSION
 
 
 def algorithm_versions() -> dict:
@@ -35,18 +36,15 @@ def algorithm_versions() -> dict:
 
     Keys are the modules implemented so far: config sampling, motion,
     photometry, the PSF, rendering, noise, blending, targets, and the
-    frame loop. ``rng_scheme`` is carried only by ``SequenceRng.metadata()``.
+    frame loop, and labels. ``rng_scheme`` is carried only by ``SequenceRng.metadata()``.
     Callers use this mapping directly; there is no nested
     ``algorithm_versions`` key.
 
     Constants stay in their modules. Each call builds a new dict, so a
     caller can modify the result without changing the next call.
 
-    Only modules that exist today are included. Label and metadata
-    versions join when those modules are implemented.
-
-    This is an identifier, not per-module compatible replay. M4, not this
-    function, will reject a record whose key set differs or whose values
+    This is an identifier, not per-module compatible replay. Metadata
+    loading rejects a record whose key set differs or whose values
     are not ``type is int`` and equal to the current versions. Missing keys
     and extra keys are both listed. Non-string keys are reported the same
     way as D33 metadata. A mismatch rejects the whole record.
@@ -64,6 +62,7 @@ def algorithm_versions() -> dict:
         "blend": BLEND_VERSION,
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
+        "labels": LABELS_VERSION,
     }
 
 
@@ -77,6 +76,7 @@ __all__ = [
     "RENDER_VERSION",
     "SEQUENCE_VERSION",
     "TARGETS_VERSION",
+    "LABELS_VERSION",
     "AppConfig",
     "Camera",
     "DerivedCamera",

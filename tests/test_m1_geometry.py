@@ -908,6 +908,7 @@ def test_wide_finite_accel_interval_reaches_the_rejection_diagnosis(loaded):
 def test_algorithm_versions_returns_a_fresh_mapping():
     from starsim import (
         BLEND_VERSION,
+        LABELS_VERSION,
         NOISE_VERSION,
         PHOTOMETRY_VERSION,
         PSF_VERSION,
@@ -927,6 +928,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "blend",
         "targets",
         "sequence",
+        "labels",
     }
     assert "rng_scheme" not in first
     assert first == {
@@ -939,6 +941,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "blend": BLEND_VERSION,
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
+        "labels": LABELS_VERSION,
     }
     assert CONFIG_SAMPLING_VERSION == 1
     assert all(type(value) is int for value in first.values())
@@ -956,6 +959,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "blend": BLEND_VERSION,
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
+        "labels": LABELS_VERSION,
     }
     assert "rng_scheme" not in second
     assert second is not first

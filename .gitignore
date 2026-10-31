@@ -5,3 +5,4 @@ __pycache__/
 *.tmp
 /Tycho1/
 /artifacts/m2_fields/
+/.tmp/
