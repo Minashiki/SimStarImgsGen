@@ -48,6 +48,7 @@ def test_unchanged_baseline_is_accepted(comparison):
 
 @pytest.mark.parametrize("field,reason", [
     ("environment", "environment"),
+    ("covered_modules", "covered_modules"),
     ("algorithm_versions", "algorithm_versions"),
     ("camera_yaml_sha256", "camera_yaml"),
     ("generator_yaml_sha256", "generator_yaml"),
@@ -158,3 +159,72 @@ def test_geometry_checker_rejects_joint_length_and_fraction_corruption(monkeypat
     monkeypatch.setattr(targets, "sample_targets", corrupt)
     record = targets._population_record((0, 6, 400, 5))
     assert any("L_native" in problem for problem in record["problems"])
+
+
+@pytest.mark.parametrize("damage", ["extra", "missing", "duplicate", "order", "mapping"])
+def test_invalid_coverage_stops_generation(comparison, damage):
+    manifest, _, calls = comparison
+    covered = manifest["groups"]["small"]["covered_modules"]
+    if damage == "extra":
+        covered.append("labels")
+    elif damage == "missing":
+        covered.pop()
+    elif damage == "duplicate":
+        covered.append(covered[0])
+    elif damage == "order":
+        covered.reverse()
+    else:
+        manifest["groups"]["small"]["covered_modules"] = dict.fromkeys(covered)
+    write_manifest(manifest)
+    assert baseline.baseline_problems("small") == ["preflight: covered_modules"]
+    assert calls == []
+
+
+@pytest.mark.parametrize("value", [999, True, 1.0])
+def test_covered_version_is_strict(comparison, value):
+    manifest, _, calls = comparison
+    manifest["groups"]["small"]["algorithm_versions"]["psf"] = value
+    write_manifest(manifest)
+    assert baseline.baseline_problems("small") == ["preflight: algorithm_versions"]
+    assert calls == []
+
+
+def test_uncovered_module_is_accepted(comparison, monkeypatch):
+    manifest, _, calls = comparison
+    current = baseline.algorithm_versions()
+    monkeypatch.setattr(baseline, "algorithm_versions", lambda: {**current, "labels": 1})
+    write_manifest(manifest)
+    assert baseline.baseline_problems("small") == []
+    assert calls == [0, 1]
+
+
+def test_missing_current_covered_module_is_rejected(comparison, monkeypatch):
+    manifest, _, calls = comparison
+    current = baseline.algorithm_versions()
+    del current["psf"]
+    monkeypatch.setattr(baseline, "algorithm_versions", lambda: current)
+    write_manifest(manifest)
+    assert baseline.baseline_problems("small") == ["preflight: algorithm_versions"]
+    assert calls == []
+
+
+def test_coverage_migration_preserves_sequences_and_rejects_repeat(comparison):
+    from tests import migrate_m3_covered_modules as migration
+
+    manifest, _, _ = comparison
+    for group in manifest["groups"].values():
+        del group["covered_modules"]
+        del group["migrations"]
+    before = copy.deepcopy(manifest)
+    write_manifest(manifest)
+    migration.main()
+    after = json.loads(baseline.OUT.read_text(encoding="utf-8"))
+    assert migration.sequence_hashes(before) == migration.sequence_hashes(after)
+    for name, group in after["groups"].items():
+        assert group.pop("covered_modules") == list(baseline.M3_COVERED_MODULES)
+        assert group.pop("migrations") == ["add covered_modules"]
+        assert group == before["groups"][name]
+    contents = baseline.OUT.read_bytes()
+    with pytest.raises(ValueError, match="already present"):
+        migration.main()
+    assert baseline.OUT.read_bytes() == contents

@@ -46,6 +46,7 @@ from tests.runtime_env import require_genstarimg, runtime_environment
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "m3_baseline" / "manifest.json"
 BASELINE_ROOT = 20261029
+M3_COVERED_MODULES = ("config_sampling", "motion", "photometry", "psf", "render", "noise", "blend", "targets", "sequence")
 FREEZE_REASON = "切换到 D12 环境"
 SEED_NOTE = "覆盖 YAML 中的 dataset.seed"
 GROUP_INDICES = {"small": (0, 1), "default": (0, 1, 2)}
@@ -210,7 +211,8 @@ def _provenance(catalog: StarCatalog, camera_sha: str, generator_sha: str) -> di
     return {
         "freeze_reason": FREEZE_REASON,
         "environment": runtime_environment(),
-        "algorithm_versions": algorithm_versions(),
+        "covered_modules": list(M3_COVERED_MODULES),
+        "algorithm_versions": {m: algorithm_versions()[m] for m in M3_COVERED_MODULES},
         "camera_yaml_sha256": camera_sha,
         "generator_yaml_sha256": generator_sha,
         "catalog": catalog_identity(catalog),
@@ -223,7 +225,14 @@ def _preflight(group: dict, catalog: StarCatalog, camera_sha: str, generator_sha
     reasons = []
     if group.get("environment") != runtime_environment():
         reasons.append("environment")
-    if group.get("algorithm_versions") != algorithm_versions():
+    if group.get("covered_modules") != list(M3_COVERED_MODULES):
+        reasons.append("covered_modules")
+    recorded = group.get("algorithm_versions")
+    current = algorithm_versions()
+    if (not isinstance(recorded, dict)
+            or set(recorded) != set(M3_COVERED_MODULES)
+            or any(type(recorded[m]) is not int or m not in current
+                   or recorded[m] != current[m] for m in M3_COVERED_MODULES)):
         reasons.append("algorithm_versions")
     if group.get("camera_yaml_sha256") != camera_sha:
         reasons.append("camera_yaml")
