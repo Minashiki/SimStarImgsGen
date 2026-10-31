@@ -4,3 +4,4 @@ __pycache__/
 .numba_cache/
 *.tmp
 /Tycho1/
+/artifacts/m2_fields/
