@@ -64,7 +64,7 @@ def _construct(config, rngs, catalog, regions, split):
     return plan, sensor, psf, camera, motion, photo, effective
 
 
-def generate_sequence(config, seed, index, out_dir, *, catalog_path=None):
+def generate_sequence(config, seed, index, out_dir, *, catalog_path=None, _task_started=None):
     """Only AppConfig and seed/index determine the camera and simulation."""
     check_camera(config)
     if seed != config.generator['dataset']['seed']:
@@ -74,15 +74,18 @@ def generate_sequence(config, seed, index, out_dir, *, catalog_path=None):
     split = regions['assignments'][index]
     catalog = StarCatalog.from_cache(catalog_path or default_cache_path())
     rngs = SequenceRng(sequence_seed(root_seed(seed), index))
-    return _write(config, rngs, catalog, regions, split, out_dir)
+    return _write(config, rngs, catalog, regions, split, out_dir, task_started=_task_started)
 
 
-def _write(config, rngs, catalog, regions, split, out_dir):
+def _write(config, rngs, catalog, regions, split, out_dir, *, task_started=None):
     start = time.perf_counter()
     plan, sensor, psf, camera, motion, photo, effective = _construct(config, rngs, catalog, regions, split)
+    construction_seconds = time.perf_counter()-start
+    initialization_seconds = start-task_started if task_started is not None else None
     objects = write_sequence(out_dir, plan, rngs, sensor, psf, camera, motion, photo,
         catalog, config, effective, derived_camera=config.derived, split=split)
-    return dict(split=split, boresight=motion.matrix[len(motion.matrix)//2, 2].tolist(),
+    return dict(initialization_seconds=initialization_seconds, construction_seconds=construction_seconds,
+                split=split, boresight=motion.matrix[len(motion.matrix)//2, 2].tolist(),
                 star_counts=[sum(c['class_id'] == 0 and c['status_default'] == 'labeled'
                                  for c in f.candidates) for f in objects],
                 seconds=time.perf_counter()-start,
@@ -98,6 +101,8 @@ def replay_sequence(sequence_path, out_dir, *, catalog_path=None):
     raw['K'] = np.asarray(raw['K'])
     config = AppConfig(record['camera_config'], record['config_unsampled'], DerivedCamera(**raw))
     check_camera(config)
+    if int(record['rng']['entropy']) != config.generator['dataset']['seed']:
+        raise ValueError('replay seed differs from configured dataset seed')
     validate_versions(record['algorithm_versions'])
     if record['environment'] != runtime_environment():
         raise ValueError('replay environment differs')
@@ -127,6 +132,7 @@ def _atomic_json(path, value):
 
 
 def _worker(config, seed, index, output, catalog_path):
+    task_started = time.perf_counter()
     final = Path(output)/f'seq_{index:06d}'
     staging = Path(output)/f'.seq_{index:06d}.partial'
     # Only the explicitly owned per-sequence staging directory is removed.
@@ -134,7 +140,7 @@ def _worker(config, seed, index, output, catalog_path):
         if staging.resolve().parent != Path(output).resolve() or staging.is_symlink():
             raise ValueError('staging directory must stay inside the dataset directory')
         shutil.rmtree(staging)
-    result = generate_sequence(config, seed, index, staging, catalog_path=catalog_path)
+    result = generate_sequence(config, seed, index, staging, catalog_path=catalog_path, _task_started=task_started)
     commit_start = time.perf_counter()
     result['files'] = {p.name: _sha256(p) for p in sorted(staging.iterdir()) if p.is_file()}
     hash_seconds = time.perf_counter()-commit_start
@@ -174,6 +180,8 @@ def verify_completed(out, index, seed, regions, signature):
                 {p.name for p in final.iterdir()} != expected | {'complete.json'} or
                 any(_sha256(final/name) != digest for name, digest in record['files'].items())):
             raise ValueError('file set or hashes differ')
+        if record['bytes'] != sum((final/name).stat().st_size for name in record['files']):
+            raise ValueError('bytes differ from sequence files')
         if int(sequence['rng']['entropy']) != seed or sequence['rng']['spawn_key'] != [_SEQUENCE_DOMAIN, index]:
             raise ValueError('sequence RNG identity differs')
         split = regions['assignments'][index]
@@ -201,6 +209,20 @@ def verify_completed(out, index, seed, regions, signature):
 
 def _utc_now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _execute_tasks(task, tasks, *, workers, after_submit=None):
+    with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context('spawn'),
+                             max_tasks_per_child=1) as pool:
+        try:
+            futures = [pool.submit(task, *args) for args in tasks]
+            if after_submit is not None:
+                after_submit()
+            for future in as_completed(futures):
+                yield future.result()
+        except BaseException:
+            pool.shutdown(wait=True, cancel_futures=True)
+            raise
 
 
 def generate_dataset(config, *, resume=False, catalog_path=None):
@@ -246,7 +268,6 @@ def generate_dataset(config, *, resume=False, catalog_path=None):
     manifest['sequences'] = previous_sequences
     manifest['complete'] = False
     started = time.perf_counter()
-    run['started_monotonic_seconds'] = started
     stop = threading.Event()
     minimum_available = [psutil.virtual_memory().available]
     concurrent_minimum = [None]
@@ -292,14 +313,11 @@ def generate_dataset(config, *, resume=False, catalog_path=None):
         if pending and workers < 1:
             raise MemoryError('need 3 GiB reserve plus 4 GiB per worker')
         if pending:
-            with ProcessPoolExecutor(max_workers=int(workers), mp_context=multiprocessing.get_context('spawn'),
-                                     max_tasks_per_child=1) as pool:
-                futures = [pool.submit(_worker, config, seed, i, str(out), str(catalog_path)) for i in pending]
-                for future in as_completed(futures):
-                    index, result = future.result()
-                    manifest['sequences'][str(index)] = result
-                    refresh()
-                    print(f'completed sequence {index}', flush=True)
+            tasks = [(config, seed, i, str(out), str(catalog_path)) for i in pending]
+            for index, result in _execute_tasks(_worker, tasks, workers=int(workers)):
+                manifest['sequences'][str(index)] = result
+                refresh()
+                print(f'completed sequence {index}', flush=True)
         # All summaries have been reconstructed during recovery or produced by this run.
         distributions = audit(regions, list(manifest['sequences'].values()), data['split']['min_seqs_for_assert'])
         manifest.update(complete=True, star_counts=distributions, workers=int(workers),

@@ -9,6 +9,7 @@ import numpy as np
 from starsim.camera import wcs_keywords
 from starsim.render_labels import canvas_geometry, footprint
 from starsim.runtime import runtime_environment
+from starsim.source_scope import SOURCE_PATHS
 
 
 def jsonable(value):
@@ -50,7 +51,7 @@ def git_provenance():
         root = git(["rev-parse", "--show-toplevel"], package)
         commit = git(["rev-parse", "HEAD"], root)
         dirty = bool(git(["status", "--porcelain", "--untracked-files=all", "--",
-                          "starsim", "scripts", "configs", "tests"], root))
+                          *SOURCE_PATHS], root))
         return dict(git_commit=commit, git_dirty=dirty)
     except (OSError, subprocess.CalledProcessError):
         return dict(git_commit=None, git_dirty=None)

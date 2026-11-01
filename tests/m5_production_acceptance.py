@@ -1,5 +1,4 @@
 """Fresh three-split determinism, production identity and source acceptance."""
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,6 +13,7 @@ from starsim.io import _sha256, write_json
 from starsim.metadata import git_provenance
 from starsim.runtime import runtime_environment
 from tests.runtime_env import require_genstarimg
+from scripts.m5_test_evidence import validate
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,15 +28,36 @@ def git(*args):
                           cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
 
 
-def code_digest():
-    names = sorted(set(git('ls-files', '--cached', '--others', '--exclude-standard', '--',
-                           'starsim', 'scripts', 'configs', 'tests').splitlines()))
-    return hashlib.sha256(''.join(f'{name}\0{_sha256(ROOT/name)}\n' for name in names).encode()).hexdigest()
-
-
 def production_config(manifest):
     source = manifest['source']
     return load_config(overrides=dict(camera=dict(sensor=source['camera']['sensor']), generator=source['generator']))
+
+
+def verified_records(production, manifest, config, regions, signature):
+    n = config.generator['dataset']['n_sequences']
+    if set(manifest['sequences']) != {str(i) for i in range(n)}:
+        raise ValueError('sequence index set differs')
+    records = {}
+    for i in range(n):
+        record = verify_completed(production, i, config.generator['dataset']['seed'], regions, signature)
+        old = dict(manifest['sequences'][str(i)])
+        timing = old.pop('commit_timing', None)
+        if old != record:
+            raise ValueError(f'manifest sequence {i} differs from verified record')
+        if timing is not None:
+            record['commit_timing'] = timing
+        records[str(i)] = record
+    for key, field in (('total_sequence_seconds', 'seconds'), ('sequence_bytes', 'bytes')):
+        if manifest[key] != sum(r[field] for r in records.values()):
+            raise ValueError(f'manifest {key} differs')
+    return records
+
+
+def commit_summary(records):
+    measured = [r['commit_timing'] for r in records.values() if 'commit_timing' in r]
+    return dict(measured_sequences=len(measured), missing_sequences=len(records)-len(measured),
+                measured_seconds={key: sum(t[key] for t in measured) for key in
+                    ('hash_seconds', 'publish_seconds', 'other_seconds', 'total_seconds')})
 
 
 def main():
@@ -52,8 +73,7 @@ def main():
         raise ValueError('acceptance requires clean starsim scripts configs tests and a git commit')
     acceptance_commit = provenance['git_commit']
     quick = json.loads((ROOT/'artifacts/m5_quick_tests.json').read_text(encoding='utf-8'))
-    if quick['source_sha256'] != code_digest() or quick['failures'] or quick['errors']:
-        raise ValueError('quick-test evidence does not match current sources or did not pass')
+    validate(quick)
     production = Path(sys.argv[1]).resolve()
     manifest = json.loads((production/'dataset.json').read_text(encoding='utf-8'))
     if manifest['schema_version'] != 2 or not manifest['complete'] or len(manifest['sequences']) != 10:
@@ -70,9 +90,9 @@ def main():
     if sensor['resolution'] != dict(width=4096, height=4096) or sensor['focal_length_mm'] != 300:
         raise ValueError('production camera required')
     sources = set()
-    records = []
+    verified = verified_records(production, manifest, config, regions, signature)
+    records = list(verified.values())
     for index in range(10):
-        records.append(verify_completed(production, index, config.generator['dataset']['seed'], regions, signature))
         sequence = json.loads((production/f'seq_{index:06d}'/'sequence.json').read_text(encoding='utf-8'))
         source = sequence['git_commit']
         if source is None or sequence['git_dirty'] is not False:
@@ -108,18 +128,26 @@ def main():
     for name in timings[0]['seconds']:
         generation[name] = sum(sum(t['seconds'][name]) if isinstance(t['seconds'][name], list)
                                else t['seconds'][name] for t in timings)
-    commits = [r['commit_timing'] for r in manifest['sequences'].values()]
     if git_provenance() != provenance:
         raise ValueError('acceptance source changed during execution')
     report = dict(environment=runtime_environment(), algorithm_versions=algorithm_versions(),
         acceptance_source=provenance, generation_commits=sorted(sources), source=signature, regions=regions,
-        sequences=manifest['sequences'], star_counts=distributions, runs=manifest['runs'],
+        sequences=verified, star_counts=distributions, runs=manifest['runs'],
         active_seconds=manifest['active_seconds'], active_seconds_is_lower_bound=manifest['active_seconds_is_lower_bound'],
-        elapsed_seconds=manifest['elapsed_seconds'], total_sequence_seconds=manifest['total_sequence_seconds'],
+        elapsed_seconds=manifest['elapsed_seconds'], total_sequence_seconds=sum(r['seconds'] for r in records),
         legacy_run_timing='unrecoverable for runs without segment records; no inferred durations',
         generation_timing=dict(segments=generation, total_seconds=sum(t['total_seconds'] for t in timings)),
-        commit_timing={key: sum(t[key] for t in commits) for key in commits[0]},
-        concurrent_memory=concurrency, sequence_bytes=manifest['sequence_bytes'],
+        dense_storage={key: sum(v[key] for t in timings for v in t['dense_storage'])
+                       for key in ('compression_seconds', 'write_seconds')},
+        commit_timing=commit_summary(verified),
+        task_timing=dict(initialization_seconds=sum(r['initialization_seconds'] for r in records),
+                         construction_seconds=sum(r['construction_seconds'] for r in records)),
+        timing_ranges=dict(initialization='_worker entry to _write entry; repeated per sequence',
+            construction='_write entry to write_sequence call; includes sampling and prepare_sequence',
+            spawn_import='unmeasured: task deserialization imports precede _worker entry',
+            numba_cache='first-call loading belongs to construction or write_sequence; not pure compute',
+            dense_storage='compression includes archive serialization; writes include flush, use OS cache, no fsync'),
+        concurrent_memory=concurrency, sequence_bytes=sum(r['bytes'] for r in records),
         disk_bytes_including_manifests=sum(p.stat().st_size for p in production.rglob('*') if p.is_file()),
         determinism=dict(interpreters_per_split=2, pythonhashseed=[1, 2], splits=comparisons, fresh_directory=str(root)))
     write_json(ROOT/'artifacts/m5_report.json', report)

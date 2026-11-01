@@ -179,7 +179,32 @@ def save_dense(path, dense):
     shoulder = (arrays["heatmap"] == 1) & (dense["reg_mask"] == 0)
     arrays["heatmap"][shoulder] = np.nextafter(np.float16(1), np.float16(0))
     np.minimum(arrays["offset"], np.nextafter(np.float32(.5), np.float32(0)), out=arrays["offset"])
-    np.savez_compressed(path, **arrays)
+    class TimedWriter:
+        def __init__(self, stream):
+            self.stream = stream
+            self.seconds = 0.
+
+        def write(self, value):
+            start = time.perf_counter()
+            result = self.stream.write(value)
+            self.seconds += time.perf_counter()-start
+            return result
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+        def flush(self):
+            start = time.perf_counter()
+            self.stream.flush()
+            self.seconds += time.perf_counter()-start
+
+    start = time.perf_counter()
+    with open(path, 'wb') as stream:
+        writer = TimedWriter(stream)
+        np.savez_compressed(writer, **arrays)
+        writer.flush()
+    total = time.perf_counter()-start
+    return dict(compression_seconds=total-writer.seconds, write_seconds=writer.seconds)
 
 
 def save_fits(path, adu, wcs, *, frame_index, exposure_s):
@@ -403,6 +428,7 @@ def write_sequence(out_dir, plan, rngs, sensor, psf, camera, motion, photometry,
     type_registry = {}
     objects, metas = [], []
     timings = dict(build_frame_labels=[], assign_status=0., dense=[], fits=[], objects_npz=[], dense_npz=[], frame_json=[])
+    dense_storage = []
     catalog_index = {(int(a), int(b)): i for i, (a, b) in
                      enumerate(zip(catalog.tyc1, catalog.tyc2))}
     for frame in iter_frames(plan, rngs, sensor, psf):
@@ -446,7 +472,7 @@ def write_sequence(out_dir, plan, rngs, sensor, psf, camera, motion, photometry,
         timings['frame_json'].append(time.perf_counter()-start)
         start = time.perf_counter()
         if cfg["save_dense"]:
-            save_dense(out/f"labels_{k:03d}.npz", dense)
+            dense_storage.append(save_dense(out/f"labels_{k:03d}.npz", dense))
         timings['dense_npz'].append(time.perf_counter()-start)
         del dense
         start = time.perf_counter()
@@ -468,7 +494,7 @@ def write_sequence(out_dir, plan, rngs, sensor, psf, camera, motion, photometry,
     accounted = sum(sum(v) if isinstance(v, list) else v for v in timings.values())
     timings['other'] = total-accounted
     write_json(out/'timing.json', dict(seconds=timings, total_seconds=total,
-        clock='perf_counter', phase='write_sequence',
+        clock='perf_counter', phase='write_sequence', dense_storage=dense_storage,
         ranges=dict(other='phase total minus named operations; includes rendering exposures and manifests',
                     fits='FITS writing call including compression',
                     dense='configured stride plus stride 4; excludes writes'),
