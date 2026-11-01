@@ -6,3 +6,5 @@ __pycache__/
 /Tycho1/
 /artifacts/m2_fields/
 /.tmp/
+/artifacts/m6/preview/
+/artifacts/m6/*.png

@@ -44,7 +44,7 @@ instead of being quietly skipped.
 - 动态相对导入（``import_module`` 带 ``package=``，或 ``__import__`` 的 ``level`` 不为 0）；
 - 别名按整个文件分析，不区分作用域，也不处理名字被重新绑定，因此可能误报，``hash`` 被重新绑定的情况同理。
 
-待定事项：现在整体禁止 ``scipy.stats``，要在 M6 开工前决定是否放开。届时的方案要点：放开 ``scipy.stats`` 的导入；继续全面禁止 ``.rvs(``；另外禁止 ``bootstrap``、``permutation_test``、``monte_carlo_test``、``qmc``。``scipy.special`` 不在禁令内。
+M6：放开 ``scipy.stats`` 的导入；继续全面禁止 ``.rvs(``；另外禁止 ``bootstrap``、``permutation_test``、``monte_carlo_test``、``qmc``。``scipy.special`` 不在禁令内。
 
 写法约定：类型注解统一写成 ``np.random.Generator``。``from numpy.random import Generator`` 会被拦截，这是有意为之。
 """
@@ -58,7 +58,7 @@ _BANNED_CALLS = frozenset({"SeedSequence", "PCG64", "Generator", "default_rng"})
 _SEED_ATTRS = frozenset({"Generator", "SeedSequence"})
 _WATCHED: dict[str, frozenset[str]] = {
     "numpy": frozenset({"random"}),
-    "scipy": frozenset({"stats"}),
+    "scipy": frozenset(),
     "os": frozenset({"urandom"}),
     "uuid": frozenset({"uuid1", "uuid4"}),
 }
@@ -83,7 +83,7 @@ def scan_source(text: str, filename: str) -> list[str]:
     functions, modules, package, star_rng = _stream_bindings(tree, filename)
     in_starsim = _in_starsim(filename)
     active = _active_packages(in_starsim)
-    found: list[str] = []
+    found: list[str] = _stats_violations(tree, filename, imported)
     for node in ast.walk(tree):
         reason = _reason(
             node,
@@ -258,7 +258,6 @@ def _forbidden_module(name: str, in_starsim: bool) -> bool:
         name == "random"
         or name.startswith("random.")
         or name.startswith("numpy.random")
-        or name.startswith("scipy.stats")
     ):
         return True
     return in_starsim and (name == "secrets" or name.startswith("secrets."))
@@ -496,3 +495,60 @@ def _called_name(func: ast.AST) -> str | None:
     if isinstance(func, ast.Attribute):
         return func.attr
     return None
+
+
+_STATS_RANDOM = frozenset({'rvs', 'bootstrap', 'permutation_test', 'monte_carlo_test', 'qmc'})
+
+
+def _stats_violations(tree, filename, imported):
+    """Resolve stats imports, simple aliases, getattr and literal dynamic imports."""
+    bindings = {}
+
+    def resolve(node):
+        if isinstance(node, ast.Name):
+            return bindings.get(node.id)
+        if isinstance(node, ast.Attribute):
+            base = resolve(node.value)
+            return f'{base}.{node.attr}' if base else None
+        if isinstance(node, ast.Call):
+            dynamic = _dynamic_import_target(node, imported)
+            if dynamic:
+                return dynamic
+            if isinstance(node.func, ast.Name) and node.func.id == 'getattr':
+                base = resolve(_arg(node, 0, 'object'))
+                attr = _string_literal(_arg(node, 1, 'name'))
+                if base and attr:
+                    return f'{base}.{attr}'
+        return None
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for item in node.names:
+                bindings[item.asname or item.name.split('.')[0]] = item.name if item.asname else item.name.split('.')[0]
+        elif isinstance(node, ast.ImportFrom):
+            for item in node.names:
+                bindings[item.asname or item.name] = f'{node.module}.{item.name}'
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(tree):
+            names, value = _simple_targets(node)
+            target = resolve(value)
+            if target:
+                for name in names:
+                    if name not in bindings:
+                        bindings[name] = target
+                        changed = True
+    def banned(path):
+        return path and path.startswith('scipy.stats.') and bool(set(path.split('.')[2:]) & _STATS_RANDOM)
+
+    found = []
+    for node in ast.walk(tree):
+        hit = banned(resolve(node))
+        if isinstance(node, ast.Import):
+            hit = hit or any(banned(a.name) for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            hit = hit or any(banned(f'{node.module}.{a.name}') for a in node.names)
+        if hit:
+            found.append(f'{filename}:{node.lineno}: scipy.stats 随机接口')
+    return found
