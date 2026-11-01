@@ -1,0 +1,1479 @@
+{
+  "environment": {
+    "cpu": "znver4",
+    "llvmlite": "0.50.0",
+    "numba": "0.68.0",
+    "numpy": "2.5.4",
+    "python": "3.12.0",
+    "scipy": "1.18.1"
+  },
+  "files": {
+    "camera_default.yaml": "080f60f3d749f372e65d180a629d1340310cccdf1861bc4170099c9a440339dd",
+    "generator_default.yaml": "f43d61886318ac94f685eb4618e8e2bccabc4049334976643361e7dc9fa1dbc3",
+    "tycho1.npz": "2269af793dfe87db04f2199edabf16fe87ba55ff83e18930e2fa90c5f6930ff1"
+  },
+  "inputs": {
+    "fixture": "tests.test_m4_labels.disk_sequence",
+    "frames": 4,
+    "report_fixture": "tests.generate_m4_report.generate",
+    "report_frames": 8,
+    "root_seed": 20261031,
+    "sequence_index": 0,
+    "strides": [
+      1,
+      4
+    ]
+  },
+  "results": {
+    "boundary/0/objects": "8f3125c9a29658e8afccf324f99aca30457d9c68f147a2d42bf13c7f3b89fb7d",
+    "boundary/0/stride1": "ec08a41836a64b948c6dc9b7c0eb4165e8326e5ec6d0fa516f28881e5597e3c5",
+    "boundary/0/stride4": "2343d6fe8a33f2c3a62ad6370b9f86f4a20b3677eced2a8f9089ddf0b16df625",
+    "native/0/objects": "fc1dd57d00bba2424d92bf14998d223480b236463a9d8623c599b7fedd4ed770",
+    "native/0/stride1": "47affaa07435b200b87111a173d3bced743f09199e897c0c2505b63f0bee7a08",
+    "native/0/stride4": "1a7ede54e6a847fb27d5a56123f5b99b4d1a9cb60aca80f960b0be8ba91d47ed",
+    "native/1/objects": "18e69fb0f32ec0018fd639ec26669eeae9c47a79b70e21586405a8a8b5a0f888",
+    "native/1/stride1": "831cb3aace6ea3bd14249a46a1ed7af9fa03d1846fd3c80c6fae8277e32368b2",
+    "native/1/stride4": "f149db00df658a6b836f6fba7e67fb7bec8ac5bde30fd2112d61e515f90ef214",
+    "native/2/objects": "3977a43fc4ffc5b604f5365d3de082b837cc00201f2f6701f41a0dc2144f2385",
+    "native/2/stride1": "6c1c59ad9d3cddc937e45d127ffe51dbd122c85858cf851b0fb7026edf3ab4fd",
+    "native/2/stride4": "a8d7b5a5d21c8322d80cbb8f28edb82a8d2b8842f96359558f0c36bb7c6f76a3",
+    "native/3/objects": "4da2a1444aa601a7568d3060bd9341ead86e2e8d1a2aeff2434731c386039368",
+    "native/3/stride1": "e3720eb8bd5ad493aedbffc75de113fc1cc7b4cf73e05965247ea8cdc12be08e",
+    "native/3/stride4": "c0f76ee04cd73c1faa9fd71cb186b749d2409aff0248240f3ea33bbfad823296",
+    "reference_union/0/objects": "fc1dd57d00bba2424d92bf14998d223480b236463a9d8623c599b7fedd4ed770",
+    "reference_union/0/stride1": "c30b069ee3069d59199c184b68927de06956fbf4de20a6119e4d4455cdd0160b",
+    "reference_union/0/stride4": "89ba92cae92acadebf1f0b4889034f6a4192ac457d70a18b16de1a9f0a6d866c",
+    "reference_union/1/objects": "18e69fb0f32ec0018fd639ec26669eeae9c47a79b70e21586405a8a8b5a0f888",
+    "reference_union/1/stride1": "a86fa578b3f18cdbe2429e7ad2c05172a1ac05369c0732aa052ab22d73200b5e",
+    "reference_union/1/stride4": "ce8c243ca9eeee2f75d2058641ccc7ca1c26256e852f9ba73c6f700395a604bd",
+    "reference_union/2/objects": "3977a43fc4ffc5b604f5365d3de082b837cc00201f2f6701f41a0dc2144f2385",
+    "reference_union/2/stride1": "8b86ab69cafb640b974abb908db81c642e493f748f37f19f6f4af49e5df3daef",
+    "reference_union/2/stride4": "d45def5cd9260c6d6b821d8d203203d7a460f2df6e4d420c1cc8399c86846696",
+    "reference_union/3/objects": "4da2a1444aa601a7568d3060bd9341ead86e2e8d1a2aeff2434731c386039368",
+    "reference_union/3/stride1": "76093b42e5548498b22415009148a39aa9efce925765831c02cd45805ac79501",
+    "reference_union/3/stride4": "15e61c23cbc3bd46e8a9dfbbf2b252d9f829e359e96dc91ceb8e8302e1fddcdb",
+    "report_native/0/objects": "208234112f6f6e9fe9d186dd58c390c7f5c10c548f320978a199f8262143da6b",
+    "report_native/0/stride1": "3a392d2e80fbb7b183f9050c82ccdb60cf0b14d4129d99f269f836d99e662f82",
+    "report_native/0/stride4": "872d72cc1fe38daf619690129bc8d59b5ce64e91ab8c4b374b9d2da5f1756414",
+    "report_native/1/objects": "0ed59bf3d5cc18091d57e921685e31e32cddde73d8aa1472e3daffb2797b7b98",
+    "report_native/1/stride1": "df10f770f115d27fc43d0020e6008d1c8646cb66441760478b6abf76d203f822",
+    "report_native/1/stride4": "670e3c9cf4aad38c482578a3eeddd15b5f1c9b4a3fea118d1264c19f099b68a6",
+    "report_native/2/objects": "d7a2c0f0443dae070f59f9d12874b041642de9bead37f751a781afab93ea764c",
+    "report_native/2/stride1": "effef6b99508d35ecbe3706cd5ef07f850833cf9f39b7322e97992c958fb46ea",
+    "report_native/2/stride4": "b6c14827a01c22171fdbed73fa94701a8c2da1ffb9dca3194b2c78a29d0d04e4",
+    "report_native/3/objects": "96cb0ed5cf923ad76568926f95caf15d9b4ee5985737c13a47c138fb27209a34",
+    "report_native/3/stride1": "560a95078bb0becac5c4e9eb188f5bbd5381225638105d1483a2fc1d0fc01b86",
+    "report_native/3/stride4": "13b14373e145e69e609d6f198222a1eb437fe4c2ffd1d5af5e9bc5a5b0f7e62a",
+    "report_native/4/objects": "213cc8f6be07e245d2c51b88fbaa5790ecf0ee95f4a7aaf9350231ffd1011186",
+    "report_native/4/stride1": "167511037ed46ab3cfde6ce8d0584e6c30f7563ccb523f885828cee7d34ea36b",
+    "report_native/4/stride4": "f24cdb7d5849fb9d38c7de8e224923b7dbda45b90909cae139a28e4b7ef7548d",
+    "report_native/5/objects": "74629d6ef5c9a81cc928a0999d10ed50ec31037d7db2cae911c7385681301176",
+    "report_native/5/stride1": "89321aec10f32fa8ba3352bd38349d51917e34a117cf22bad66cebf873446c9d",
+    "report_native/5/stride4": "bfb772e8fd640a7eb54fcd6ca6c77e5ad683181a54d262606c02539278626fad",
+    "report_native/6/objects": "c87f6be58c2bcdebd2cc075a1fd4572adf7c53ee28684d28afa68e9ecdd36528",
+    "report_native/6/stride1": "1fcd2789a64d2dbfeae6140d869d93ede90b7641efbe7a1e81144c08bdb3194a",
+    "report_native/6/stride4": "bc4752d68b63d1e417b2a00c4b5890f4697fcafb199522a8d2b7b212a4934e5d",
+    "report_native/7/objects": "1b8db9c00e37bad8e9a5d8d936d91db559ceac0b509e3b545b1dcbca1b21fa25",
+    "report_native/7/stride1": "730d17202e045f1087e4fb35d44bce23aa723fad8b06ab2706c3f1ae209f2532",
+    "report_native/7/stride4": "88737f4f7172ce823e321a4310e167d2b3c2638af92abec412a312c20df540a2",
+    "report_reference/0/objects": "208234112f6f6e9fe9d186dd58c390c7f5c10c548f320978a199f8262143da6b",
+    "report_reference/0/stride1": "739804e7d6a5cf839a0005c2d39483884e9e9ba8133703cab0c2d64a394a192b",
+    "report_reference/0/stride4": "42e2a0ca31072163640cc4957f83665c275a3879fb96dd54bb81e852d97f4d8c",
+    "report_reference/1/objects": "0ed59bf3d5cc18091d57e921685e31e32cddde73d8aa1472e3daffb2797b7b98",
+    "report_reference/1/stride1": "9f74912112bd1c849e0ec47041ae22ad4242fd7cf2a9fba7d72a5dacf8e1afdb",
+    "report_reference/1/stride4": "59e409f3b59aa4383dfd704b55601a0b3181c80664062c480d7e108a80dbffe2",
+    "report_reference/2/objects": "d7a2c0f0443dae070f59f9d12874b041642de9bead37f751a781afab93ea764c",
+    "report_reference/2/stride1": "e0ac74fcfe8f9e1e19532e80f4b589ecc6afb4a725dbc62800cd5e99febf1ba0",
+    "report_reference/2/stride4": "5bce4d04c5d285beb422e84b9a882fe37efacdf37cf74d4e1659cb791b735990",
+    "report_reference/3/objects": "96cb0ed5cf923ad76568926f95caf15d9b4ee5985737c13a47c138fb27209a34",
+    "report_reference/3/stride1": "773decf9d675d152bf22a22331a1138c8dd824e6ee83102502d62a4d549afa4c",
+    "report_reference/3/stride4": "b4f087181a9a7c8b7afd3eb75ef5ea83454b1f9c3c9105803b346e8b3cfd7a2a",
+    "report_reference/4/objects": "213cc8f6be07e245d2c51b88fbaa5790ecf0ee95f4a7aaf9350231ffd1011186",
+    "report_reference/4/stride1": "b5159b6f15764b95cd50c2839b15c7b6661fc820758ac5e0bf2219732b01a6d3",
+    "report_reference/4/stride4": "b3c322bb4cf2fe85b36132dec1b7b5d3887a7327e45d73d6b89e9228ff7e1415",
+    "report_reference/5/objects": "74629d6ef5c9a81cc928a0999d10ed50ec31037d7db2cae911c7385681301176",
+    "report_reference/5/stride1": "b366f9dfd29d60abc8a53477169555a5dd70ee1389c975ca029f6478ad2cb147",
+    "report_reference/5/stride4": "53bfb8bc34c9957611f706bb0c51d61db2270b51e7a3571e1e345c69cbf64e2d",
+    "report_reference/6/objects": "c87f6be58c2bcdebd2cc075a1fd4572adf7c53ee28684d28afa68e9ecdd36528",
+    "report_reference/6/stride1": "204894fcd35e73921c86db4a3061e1019d111f9d0b4f8144e38c22eab32f97cb",
+    "report_reference/6/stride4": "e34a1246647631a452105097c04da367c5663e1faa8f6d6d46163da4ea1ea248",
+    "report_reference/7/objects": "1b8db9c00e37bad8e9a5d8d936d91db559ceac0b509e3b545b1dcbca1b21fa25",
+    "report_reference/7/stride1": "ebd578598ce70d7d20d72e0add7b4511d5cfd44ff14d1bc70c8ac21521b07397",
+    "report_reference/7/stride4": "c8677e8629f8e5445ecde94c55fe38c99c830b693da3bdf0aea31b7a33e3e41c",
+    "report_statistics": [
+      {
+        "collision_count": 0,
+        "cosmic_rays": 12,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.294097900390625,
+          0.0003204345703125,
+          0.0
+        ],
+        "outside_with_flux": 132,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 26,
+          "labeled": 15,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 7,
+            "faint": 5,
+            "gap": 27,
+            "ultra": 2
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 408,
+          "candidates": 4656,
+          "ignore": 3312,
+          "labeled": 1344,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            13,
+            34,
+            156,
+            544,
+            1341,
+            2212,
+            352,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.120000000000001,
+          "magnitude_min": 4.147174085521737,
+          "rendered": 5200
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 24,
+          "labeled": 15,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 7,
+            "faint": 3,
+            "gap": 26,
+            "ultra": 3
+          },
+          "truncated": 1
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 20,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.23334121704101562,
+          0.0,
+          0.008129119873046875
+        ],
+        "outside_with_flux": 126,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 4,
+          "exiting": 0,
+          "ignore": 22,
+          "labeled": 19,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 8,
+            "faint": 6,
+            "gap": 22,
+            "ultra": 5
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 389,
+          "candidates": 4715,
+          "ignore": 3205,
+          "labeled": 1510,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            13,
+            35,
+            162,
+            547,
+            1392,
+            2198,
+            364,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.1,
+          "magnitude_min": 4.147174085521737,
+          "rendered": 5230
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 4,
+          "exiting": 0,
+          "ignore": 21,
+          "labeled": 18,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 10,
+            "faint": 3,
+            "gap": 21,
+            "ultra": 5
+          },
+          "truncated": 2
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 12,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.19504547119140625,
+          0.0,
+          0.00746917724609375
+        ],
+        "outside_with_flux": 126,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 6,
+          "exiting": 2,
+          "ignore": 16,
+          "labeled": 25,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 9,
+            "faint": 8,
+            "gap": 19,
+            "ultra": 5
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 383,
+          "candidates": 4631,
+          "ignore": 3053,
+          "labeled": 1578,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            11,
+            35,
+            171,
+            563,
+            1407,
+            2106,
+            334,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.07,
+          "magnitude_min": 4.15,
+          "rendered": 5131
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 7,
+          "exiting": 3,
+          "ignore": 14,
+          "labeled": 25,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 5,
+            "gap": 15,
+            "ultra": 6
+          },
+          "truncated": 2
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 6,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.18341827392578125,
+          0.00018310546875,
+          0.007457733154296875
+        ],
+        "outside_with_flux": 116,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 8,
+          "exiting": 4,
+          "ignore": 10,
+          "labeled": 31,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 14,
+            "faint": 6,
+            "gap": 14,
+            "ultra": 7
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 377,
+          "candidates": 4552,
+          "ignore": 2963,
+          "labeled": 1589,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            14,
+            35,
+            172,
+            563,
+            1359,
+            2073,
+            332,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.07,
+          "magnitude_min": 4.15,
+          "rendered": 5048
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 4,
+          "exiting": 7,
+          "ignore": 13,
+          "labeled": 26,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 14,
+            "faint": 5,
+            "gap": 10,
+            "ultra": 10
+          },
+          "truncated": 2
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 13,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.17911529541015625,
+          0.00034332275390625,
+          0.003208160400390625
+        ],
+        "outside_with_flux": 108,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 3,
+          "exiting": 2,
+          "ignore": 11,
+          "labeled": 30,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 8,
+            "gap": 15,
+            "ultra": 5
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 350,
+          "candidates": 4371,
+          "ignore": 2835,
+          "labeled": 1536,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            15,
+            44,
+            165,
+            542,
+            1316,
+            1981,
+            305,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.06,
+          "magnitude_min": 4.47,
+          "rendered": 4828
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 5,
+          "exiting": 4,
+          "ignore": 14,
+          "labeled": 25,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 15,
+            "faint": 2,
+            "gap": 14,
+            "ultra": 8
+          },
+          "truncated": 4
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 14,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.19366455078125,
+          0.0,
+          0.0
+        ],
+        "outside_with_flux": 132,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 5,
+          "exiting": 3,
+          "ignore": 8,
+          "labeled": 33,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 7,
+            "gap": 13,
+            "ultra": 8
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 327,
+          "candidates": 4178,
+          "ignore": 2791,
+          "labeled": 1387,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            17,
+            52,
+            165,
+            512,
+            1238,
+            1879,
+            313,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.06,
+          "magnitude_min": 4.47,
+          "rendered": 4605
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 4,
+          "exiting": 5,
+          "ignore": 14,
+          "labeled": 25,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 17,
+            "faint": 2,
+            "gap": 15,
+            "ultra": 5
+          },
+          "truncated": 2
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 10,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.19788742065429688,
+          3.814697265625e-05,
+          0.00011444091796875
+        ],
+        "outside_with_flux": 110,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 0,
+          "exiting": 8,
+          "ignore": 11,
+          "labeled": 30,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 7,
+            "gap": 15,
+            "ultra": 6
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 283,
+          "candidates": 4081,
+          "ignore": 2817,
+          "labeled": 1264,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            18,
+            52,
+            156,
+            512,
+            1195,
+            1840,
+            304,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.07,
+          "magnitude_min": 4.47,
+          "rendered": 4437
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 0,
+          "exiting": 5,
+          "ignore": 19,
+          "labeled": 20,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 14,
+            "faint": 2,
+            "gap": 20,
+            "ultra": 3
+          },
+          "truncated": 1
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 15,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.22286224365234375,
+          0.0,
+          0.0
+        ],
+        "outside_with_flux": 97,
+        "points": {
+          "blended": 0,
+          "candidates": 41,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 19,
+          "labeled": 22,
+          "never_full": 0,
+          "rendered": 41,
+          "tier_design": {
+            "bright": 18,
+            "faint": 11,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 10,
+            "faint": 6,
+            "gap": 21,
+            "ultra": 4
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 256,
+          "candidates": 3830,
+          "ignore": 2701,
+          "labeled": 1129,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            16,
+            52,
+            152,
+            477,
+            1133,
+            1719,
+            278,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.850000000000001,
+          "magnitude_median": 10.06,
+          "magnitude_min": 3.73382145772922,
+          "rendered": 4154
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 39,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 24,
+          "labeled": 15,
+          "never_full": 0,
+          "rendered": 39,
+          "tier_design": {
+            "bright": 23,
+            "faint": 4,
+            "ultra": 12
+          },
+          "tier_measured": {
+            "bright": 13,
+            "gap": 25,
+            "ultra": 1
+          },
+          "truncated": 0
+        }
+      }
+    ],
+    "statistics": [
+      {
+        "collision_count": 0,
+        "cosmic_rays": 12,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.006489908982983775,
+          0.0015829046299960427,
+          0.006094182825484765
+        ],
+        "outside_with_flux": 6,
+        "points": {
+          "blended": 0,
+          "candidates": 32,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 9,
+          "labeled": 23,
+          "never_full": 0,
+          "rendered": 32,
+          "tier_design": {
+            "bright": 17,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 14,
+            "faint": 6,
+            "gap": 8,
+            "ultra": 4
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 0,
+          "candidates": 77,
+          "ignore": 54,
+          "labeled": 23,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            7,
+            24,
+            36,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.7,
+          "magnitude_median": 10.07,
+          "magnitude_min": 7.22,
+          "rendered": 77
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 31,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 15,
+          "labeled": 16,
+          "never_full": 1,
+          "rendered": 31,
+          "tier_design": {
+            "bright": 16,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 9,
+            "faint": 5,
+            "gap": 13,
+            "ultra": 4
+          },
+          "truncated": 3
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 20,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.006846062524732885,
+          0.0019390581717451524,
+          0.003996834190740008
+        ],
+        "outside_with_flux": 5,
+        "points": {
+          "blended": 0,
+          "candidates": 32,
+          "entering": 2,
+          "exiting": 8,
+          "ignore": 7,
+          "labeled": 25,
+          "never_full": 0,
+          "rendered": 32,
+          "tier_design": {
+            "bright": 17,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 16,
+            "faint": 5,
+            "gap": 6,
+            "ultra": 5
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 0,
+          "candidates": 77,
+          "ignore": 49,
+          "labeled": 28,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            6,
+            24,
+            36,
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.7,
+          "magnitude_median": 10.08,
+          "magnitude_min": 7.22,
+          "rendered": 77
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 31,
+          "entering": 4,
+          "exiting": 4,
+          "ignore": 11,
+          "labeled": 20,
+          "never_full": 1,
+          "rendered": 31,
+          "tier_design": {
+            "bright": 16,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 10,
+            "faint": 5,
+            "gap": 10,
+            "ultra": 6
+          },
+          "truncated": 2
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 12,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.006094182825484765,
+          0.0008705975464978235,
+          0.002849228333992877
+        ],
+        "outside_with_flux": 3,
+        "points": {
+          "blended": 0,
+          "candidates": 32,
+          "entering": 5,
+          "exiting": 2,
+          "ignore": 9,
+          "labeled": 23,
+          "never_full": 0,
+          "rendered": 32,
+          "tier_design": {
+            "bright": 17,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 5,
+            "gap": 11,
+            "ultra": 3
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 0,
+          "candidates": 76,
+          "ignore": 47,
+          "labeled": 29,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            7,
+            23,
+            36,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.7,
+          "magnitude_median": 10.08,
+          "magnitude_min": 7.22,
+          "rendered": 76
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 31,
+          "entering": 10,
+          "exiting": 2,
+          "ignore": 5,
+          "labeled": 26,
+          "never_full": 1,
+          "rendered": 31,
+          "tier_design": {
+            "bright": 16,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 13,
+            "faint": 8,
+            "gap": 4,
+            "ultra": 6
+          },
+          "truncated": 4
+        }
+      },
+      {
+        "collision_count": 0,
+        "cosmic_rays": 6,
+        "hot_kinds": {
+          "0": 6,
+          "1": 0,
+          "2": 0
+        },
+        "ignore_fraction": [
+          0.0072813612979817964,
+          0.0007914523149980214,
+          0.0009497427779976257
+        ],
+        "outside_with_flux": 5,
+        "points": {
+          "blended": 0,
+          "candidates": 32,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 11,
+          "labeled": 21,
+          "never_full": 0,
+          "rendered": 32,
+          "tier_design": {
+            "bright": 17,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 11,
+            "faint": 4,
+            "gap": 12,
+            "ultra": 5
+          },
+          "truncated": 0
+        },
+        "stars": {
+          "blended": 0,
+          "candidates": 76,
+          "ignore": 55,
+          "labeled": 21,
+          "magnitude_bins": [
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ],
+          "magnitude_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            8,
+            23,
+            36,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "magnitude_max": 11.7,
+          "magnitude_median": 10.07,
+          "magnitude_min": 7.22,
+          "rendered": 76
+        },
+        "streaks": {
+          "blended": 0,
+          "candidates": 31,
+          "entering": 0,
+          "exiting": 0,
+          "ignore": 6,
+          "labeled": 25,
+          "never_full": 1,
+          "rendered": 31,
+          "tier_design": {
+            "bright": 16,
+            "faint": 7,
+            "ultra": 8
+          },
+          "tier_measured": {
+            "bright": 14,
+            "faint": 6,
+            "gap": 6,
+            "ultra": 5
+          },
+          "truncated": 2
+        }
+      }
+    ],
+    "tie/0/objects": "5ad734fb68c5579ddba10e584df7c0ec9eaf75c2b43be8023b3682bbcbf21b6e",
+    "tie/0/stride1": "0f0d01e73956207202fe94cb92945e87fe7229dedf450a07bba331074ad1cf21",
+    "tie/0/stride4": "addb2159b5ff224e106edbc4d0eaad2da9186967c598941d4662eafb7556918d"
+  },
+  "source_commit": "ad66eba"
+}

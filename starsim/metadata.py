@@ -57,10 +57,11 @@ def git_provenance():
 
 
 def sequence_metadata(config, effective, rngs, camera, motion, sensor, psf,
-                      photometry, population, catalog, objects_seq, *, derived_camera, provenance, split="train"):
+                      photometry, population, catalog, objects_seq, *, derived_camera, provenance, split="train", canvas=None):
     from starsim import algorithm_versions
 
-    origin, size = canvas_geometry(objects_seq, {"label_frame": "reference", "canvas": "union"})
+    origin, size = (canvas_geometry(objects_seq, {"label_frame": "reference", "canvas": "union"})
+                    if canvas is None else canvas)
     translation = np.array([[1, 0, -origin[0]], [0, 1, -origin[1]], [0, 0, 1.]])
     sensor_fields = ("hot_row", "hot_col", "hot_kind", "hot_level_a", "hot_level_b", "hot_state",
                      "hot_p_flip", "dead_row", "dead_col", "row_offset_e", "col_offset_e")
@@ -87,8 +88,7 @@ def frame_metadata(frame, labels, camera, motion, sensor, photometry, dense=None
     for cls, name in enumerate(("stars", "points", "streaks")):
         cs = [c for c in labels.candidates if c["class_id"] == cls]
         stats[name] = dict(rendered=sum(s["class_id"] == cls for s in labels.sources),
-                           candidates=len(cs), labeled=sum(c["status_default"] == "labeled" for c in cs),
-                           ignore=sum(c["status_default"] == "ignore" for c in cs),
+                           candidates=len(cs),
                            blended=sum(c["blended"] for c in cs))
         if cls == 0:
             mags = [c["vmag"] for c in cs]

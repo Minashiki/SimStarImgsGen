@@ -25,8 +25,10 @@ def _map(H, x, y, sign):
         mapped = np.stack((x, y, np.ones_like(x)), axis=-1) @ H.T
         result = mapped[..., :2] / mapped[..., 2:]
     if (not np.all(np.isfinite(mapped)) or np.any(mapped[..., 2] == 0)
-            or not np.all(np.isfinite(result)) or np.any(np.sign(mapped[..., 2]) != sign)):
+            or not np.all(np.isfinite(result))):
         raise ValueError("homography mapping has non-finite numerator, denominator or quotient")
+    if np.any(np.sign(mapped[..., 2]) != sign):
+        raise ValueError("homography mapping denominator signs are inconsistent")
     return result
 
 
@@ -129,7 +131,7 @@ def render_dense(objects_seq, frame_k, H_k_to_target, cfg):
     return _render_frame(objects, frame_k, H_k_to_target, cfg)
 
 
-def _render_frame(objects, frame_k, H_k_to_target, cfg):
+def _render_frame(objects, frame_k, H_k_to_target, cfg, *, canvas=None):
     frame = objects[frame_k]
     reference = cfg.get("label_frame", "native") == "reference"
     if reference:
@@ -143,7 +145,7 @@ def _render_frame(objects, frame_k, H_k_to_target, cfg):
         if "origin" in cfg or "size" in cfg:
             raise ValueError("native mode does not accept origin or size")
     sign = _corner_sign(H, frame.width, frame.height)
-    origin, size = canvas_geometry(objects, cfg)
+    origin, size = canvas_geometry(objects, cfg) if canvas is None else canvas
     origin = tuple(cfg.get("origin", origin))
     size = tuple(cfg.get("size", size))
     stride = cfg.get("stride", 1)

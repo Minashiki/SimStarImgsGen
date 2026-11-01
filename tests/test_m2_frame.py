@@ -1488,6 +1488,7 @@ def test_dead_pixel_mean_is_zero_and_cosmic_rays_are_single_frame():
             assert ray.endpoint_disp_px <= ray.path_length_px + 1e-9
 
 
+@pytest.mark.slow
 def test_frame_render_of_5000_sources_is_under_three_seconds(camera):
     psf = PsfModel(
         sigma0=1.15,
@@ -1540,6 +1541,7 @@ def test_frame_render_of_5000_sources_is_under_three_seconds(camera):
     assert finished - exposed <= 0.5
 
 
+@pytest.mark.slow
 def test_one_very_bright_star_and_build_sensor_stay_inside_their_budgets(camera, loaded):
     """以默认配置为基础，将帧数临时覆盖为 16。
 

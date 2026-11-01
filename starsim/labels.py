@@ -254,14 +254,23 @@ def pixel_groups(sources, stamps, light, psf, pixel_scale=None):
         else:
             groups.setdefault(s["raw_group_id"], []).append(i)
     active = sorted(tuple(v) for v in groups.values())
+    # Inclusive boxes: the exact filter below retains boundary pixels and
+    # canonical enumeration retains the frozen contribution tie break.
+    cells = {}
+    for j, source in enumerate(sources):
+        r0, r1, c0, c1 = source['box']
+        if r0 >= 0:
+            for rr in range(r0//32, r1//32+1):
+                for cc in range(c0//32, c1//32+1):
+                    cells.setdefault((rr, cc), []).append(j)
     cache, ends = {}, {}
     for i, s in enumerate(sources):
         if s["class_id"] == 0 and s["peak_row"] >= 0 and s["s_self"] > 0:
             row, col = climb_peak(light, s["peak_row"], s["peak_col"], cache)
             scale = 1.0 if pixel_scale is None else float(pixel_scale[row, col])
-            covering = [j for j, source in enumerate(sources)
-                        if source["box"][0] >= 0 and source["box"][0] <= row <= source["box"][1]
-                        and source["box"][2] <= col <= source["box"][3]]
+            covering = [j for j in cells.get((row//32, col//32), [])
+                        if sources[j]["box"][0] <= row <= sources[j]["box"][1]
+                        and sources[j]["box"][2] <= col <= sources[j]["box"][3]]
             ends[i] = max(covering, key=lambda j:
                           (_contribution(sources[j], stamps[j], row, col)*scale, -j))
     while True:

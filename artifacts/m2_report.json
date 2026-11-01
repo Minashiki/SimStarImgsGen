@@ -11,7 +11,7 @@
       },
       "algorithm_versions": {
         "config_sampling": 1,
-        "motion": 2,
+        "motion": 3,
         "photometry": 1,
         "psf": 1,
         "render": 3,
@@ -19,7 +19,8 @@
         "blend": 5,
         "targets": 2,
         "sequence": 1,
-        "labels": 3
+        "labels": 3,
+        "split": 2
       },
       "data": {
         "n_fields": 40,
@@ -37,32 +38,37 @@
       }
     },
     "wide_psf": {
-      "environment": {
-        "python": "3.12.0",
-        "numpy": "2.5.4",
-        "numba": "0.68.0",
-        "llvmlite": "0.50.0",
-        "scipy": "1.18.1",
-        "cpu": "znver4"
-      },
       "algorithm_versions": {
+        "blend": 5,
         "config_sampling": 1,
-        "motion": 2,
+        "labels": 3,
+        "motion": 3,
+        "noise": 4,
         "photometry": 1,
         "psf": 1,
         "render": 3,
-        "noise": 4,
-        "blend": 5,
-        "targets": 2,
         "sequence": 1,
-        "labels": 3
+        "split": 2,
+        "targets": 2
       },
       "data": {
-        "wide_psf_sigma": 1.5,
+        "wide_psf_blend_rate_median": 0.011709689287980505,
         "wide_psf_halo_fraction": 0.03,
         "wide_psf_screen_vs_full_group_disagreements": 0,
-        "wide_psf_blend_rate_median": 0.011709689287980505
-      }
+        "wide_psf_sigma": 1.5
+      },
+      "environment": {
+        "cpu": "znver4",
+        "llvmlite": "0.50.0",
+        "numba": "0.68.0",
+        "numpy": "2.5.4",
+        "python": "3.12.0",
+        "scipy": "1.18.1"
+      },
+      "migrations": [
+        "D77: motion 2\u21923 default path identical; split 1 unused by M2",
+        "D78: split 1\u21922; split is not used by M2; data unchanged"
+      ]
     }
   }
 }

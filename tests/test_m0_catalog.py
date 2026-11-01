@@ -183,6 +183,7 @@ def test_delivered_cache_matches_mat(built):
     np.testing.assert_allclose(catalog.xyz, built["arrays"]["xyz"], rtol=0.0, atol=1e-12)
 
 
+@pytest.mark.slow
 def test_delivered_cache_load_time():
     path = default_cache_path()
     if not path.is_file():

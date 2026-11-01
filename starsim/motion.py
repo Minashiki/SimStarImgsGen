@@ -3,9 +3,9 @@
 ``simulate_sequence`` draws one sequence from the ``motion`` stream and writes
 the accepted speed and acceleration back onto the effective config. Those
 scalars meet the nominal-step constraints below, so a whole-turn alias
-(an acceleration near ``4π(f/p)``) is not written back. Split constraints
-and ``min_labeled_stars`` are not applied here. They join the checks below
-later, and that change increments :data:`MOTION_ALGORITHM_VERSION`.
+(an acceleration near ``4π(f/p)``) is not written back. Optional sky regions
+and catalog enable the production split and minimum-star acceptance checks.
+Leaving both at None retains the v2 default path exactly (D77).
 
 Draw order on every attempt, from the single ``motion`` generator. Changing
 this order increments the motion-algorithm version:
@@ -159,8 +159,8 @@ from starsim.rng import SequenceRng
 # derive_camera 的公式一旦改变，会通过 K 和 f_over_p 影响运动输出，本版本要加一。
 # 本轮只收紧相机配置支持范围，公式没变，所以不加一。
 # 1 → 2：新增名义步进检查；φ 改用稳定的左上块公式。
-# min_labeled_stars 和划分约束推迟，以后直接接入判定；接入时要加一。
-MOTION_ALGORITHM_VERSION = 2
+# 2 → 3：直接接入划分、最低星数检查；None 默认路径逐位不变（D77）。
+MOTION_ALGORITHM_VERSION = 3
 
 _MAX_ATTEMPTS = 10000
 _RA_NGP = math.radians(192.85948)
@@ -255,6 +255,7 @@ def simulate_sequence(
     effective: dict,
     rngs: SequenceRng,
     derived: DerivedCamera,
+    *, sky_regions=None, split=None, catalog=None,
 ) -> SequenceMotion:
     """Sample a pointing and a no-roll slew. Mutates ``effective`` in place.
 
@@ -315,6 +316,10 @@ def simulate_sequence(
     rng = rngs.get("motion")
 
     counts = {name: 0 for name in _REJECTION_REASONS}
+    if sky_regions is not None:
+        counts['sky_split'] = 0
+    if catalog is not None:
+        counts['min_labeled_stars'] = 0
     accepted: SequenceMotion | None = None
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         ra0, dec0, roll0 = _draw_pointing(rng)
@@ -351,6 +356,13 @@ def simulate_sequence(
             speed_hi=speed_hi,
             galactic_min_deg=galactic_min,
         )
+        if reason is None and sky_regions is not None:
+            from starsim.split import accepts
+            if not accepts(sky_regions, split, matrices[n_frames//2, 2]):
+                reason = 'sky_split'
+        if reason is None and catalog is not None:
+            if not _minimum_stars(matrices[n_frames//2], camera, catalog, effective):
+                reason = 'min_labeled_stars'
         if reason is None:
             accepted = _derive_motion(
                 camera=camera,
@@ -386,6 +398,22 @@ def simulate_sequence(
     motion_cfg["speed_px_per_frame"] = float(accepted.speed0_px)
     motion_cfg["accel_px_per_frame2"] = float(accepted.accel_px_per_frame2)
     return accepted
+
+
+def _minimum_stars(matrix, camera, catalog, effective):
+    """Count magnitude-limited centers in the middle frame, before exposure."""
+    from starsim.camera import project_icrs
+    ra = float(np.degrees(np.arctan2(matrix[2, 1], matrix[2, 0])) % 360)
+    dec = float(np.degrees(np.arcsin(matrix[2, 2])))
+    radius = math.degrees(math.atan(math.hypot(camera.width, camera.height)/(2*camera.f_over_p)))
+    indices = catalog.cone_query(ra, dec, radius)
+    indices = indices[catalog.vmag[indices] <= effective['photometry']['mag_limit']]
+    if not len(indices):
+        return effective['pointing']['min_labeled_stars'] == 0
+    xy = project_icrs(camera, matrix, catalog.xyz[indices])
+    inside = ((xy[:, 0] >= -.5) & (xy[:, 0] < camera.width-.5)
+              & (xy[:, 1] >= -.5) & (xy[:, 1] < camera.height-.5))
+    return int(inside.sum()) >= effective['pointing']['min_labeled_stars']
 
 
 def _candidate_attitudes(
@@ -463,9 +491,8 @@ def _first_rejection(
 
     ``nominal_step`` is decided before the matrices exist. The order here is
     ``projection``, ``speed``, ``horizon``, ``galactic_latitude``.
-    ``min_labeled_stars`` and the split constraints will be further checks in
-    this function. Adding them increments :data:`MOTION_ALGORITHM_VERSION`.
-    There is no callback list.
+    Production adds sky split and minimum-star checks immediately after
+    this result in the same rejection loop. There is no callback list.
     """
     steps = matrices.shape[0] - 1
     center = np.array([camera.cx, camera.cy], dtype=np.float64)
@@ -627,7 +654,7 @@ def _rejection_message(
         "每次尝试只按首次失败原因计入一类，各类之和等于拒绝次数；"
         "这不是所有失败条件的完整统计。",
     ]
-    lines.extend(f"{name}={counts[name]}" for name in _REJECTION_REASONS)
+    lines.extend(f"{name}={counts[name]}" for name in counts)
     lines.extend(
         [
             f"speed_px_per_frame={speed_spec!r}",

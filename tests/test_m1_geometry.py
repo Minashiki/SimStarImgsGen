@@ -915,6 +915,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         RENDER_VERSION,
         SEQUENCE_VERSION,
         TARGETS_VERSION,
+        SPLIT_VERSION,
     )
 
     first = algorithm_versions()
@@ -929,6 +930,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "targets",
         "sequence",
         "labels",
+        "split",
     }
     assert "rng_scheme" not in first
     assert first == {
@@ -942,6 +944,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
         "labels": LABELS_VERSION,
+        "split": SPLIT_VERSION,
     }
     assert CONFIG_SAMPLING_VERSION == 1
     assert all(type(value) is int for value in first.values())
@@ -960,6 +963,7 @@ def test_algorithm_versions_returns_a_fresh_mapping():
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
         "labels": LABELS_VERSION,
+        "split": SPLIT_VERSION,
     }
     assert "rng_scheme" not in second
     assert second is not first
@@ -985,7 +989,7 @@ def test_motion_covered_float_inputs_fail_before_the_stream(loaded):
 
 def test_motion_algorithm_version_stays_out_of_rng_metadata():
     assert type(MOTION_ALGORITHM_VERSION) is int
-    assert MOTION_ALGORITHM_VERSION == 2
+    assert MOTION_ALGORITHM_VERSION == 3
     assert RNG_SCHEME_VERSION == 1
     rngs = SequenceRng(sequence_seed(root_seed(1), 0))
     meta = rngs.metadata()

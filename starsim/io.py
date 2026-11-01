@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 from dataclasses import fields
 from pathlib import Path
 
@@ -275,7 +276,7 @@ def _sequence_count(sequence):
     return n
 
 
-def write_labels_manifest(derived_dir, sequence_dir, cfg, objects):
+def write_labels_manifest(derived_dir, sequence_dir, cfg, objects, *, canvas=None):
     from starsim import algorithm_versions
     from starsim.render_labels import canvas_geometry
 
@@ -284,7 +285,7 @@ def write_labels_manifest(derived_dir, sequence_dir, cfg, objects):
     n = _sequence_count(sequence)
     if len(objects) != n:
         raise ValueError("objects frame count differs from sequence")
-    origin, size = canvas_geometry(objects, cfg)
+    origin, size = canvas_geometry(objects, cfg) if canvas is None else canvas
     frames = []
     for k in range(n):
         name = f"labels_{k:03d}.npz"
@@ -391,54 +392,85 @@ def write_sequence(out_dir, plan, rngs, sensor, psf, camera, motion, photometry,
     """
     from starsim.labels import assign_status, build_frame_labels
     from starsim.metadata import frame_metadata, sequence_metadata
-    from starsim.render_labels import _render_frame
+    from starsim.render_labels import _render_frame, canvas_geometry
     from starsim.sequence import iter_frames
 
+    generation_start = time.perf_counter()
     preflight_sequence(plan, sensor, motion, effective, camera, derived_camera)
     from starsim.metadata import git_provenance
     provenance = git_provenance()
     out = prepare_output_directory(out_dir)
     type_registry = {}
     objects, metas = [], []
+    timings = dict(build_frame_labels=[], assign_status=0., dense=[], fits=[], objects_npz=[], dense_npz=[], frame_json=[])
     catalog_index = {(int(a), int(b)): i for i, (a, b) in
                      enumerate(zip(catalog.tyc1, catalog.tyc2))}
     for frame in iter_frames(plan, rngs, sensor, psf):
+        start = time.perf_counter()
         labels = build_frame_labels(frame, sensor, psf, camera, motion, plan.population, catalog,
                                     tiers=effective["targets"]["tiers"], catalog_index=catalog_index)
-        assign_status([labels], effective["labels"])
+        timings['build_frame_labels'].append(time.perf_counter()-start)
         meta = frame_metadata(frame, labels, camera, motion, sensor, photometry)
+        start = time.perf_counter()
         save_fits(out/f"frame_{frame.frame_index:03d}.fits.fz", frame.exposure.adu, meta["WCS"],
                   frame_index=frame.frame_index, exposure_s=sensor.exposure_s)
+        timings['fits'].append(time.perf_counter()-start)
         objects.append(labels)
         metas.append(meta)
         del frame
+    start = time.perf_counter()
     assign_status(objects, effective["labels"])
+    timings['assign_status'] = time.perf_counter()-start
+    union = canvas_geometry(objects, dict(label_frame='reference', canvas='union'))
+    cfg = effective['labels']
+    canvas = (union if cfg['label_frame'] == 'reference' and cfg.get('canvas', 'union') == 'union'
+              else ((0, 0), (camera.width, camera.height)))
     collisions, labeled, cropped = 0, 0, 0
     for labels, meta in zip(objects, metas):
         k = labels.frame_index
-        cfg = effective["labels"]
         H = labels.H_to_ref if cfg["label_frame"] == "reference" else np.eye(3)
-        dense = _render_frame(objects, k, H, cfg)
+        start = time.perf_counter()
+        dense = _render_frame(objects, k, H, cfg, canvas=canvas)
+        dense_time = time.perf_counter()-start
         for cls, name in enumerate(("stars", "points", "streaks")):
             cs = [c for c in labels.candidates if c["class_id"] == cls]
             meta["statistics"][name].update(labeled=sum(c["status_default"] == "labeled" for c in cs),
                                            ignore=sum(c["status_default"] == "ignore" for c in cs))
         meta["statistics"]["ignore_fraction"] = dense["ignore"].mean(axis=(1, 2))
         meta["statistics"]["collision_count"] = len(dense["collision"])
+        start = time.perf_counter()
         save_objects(out/f"objects_{k:03d}.npz", labels, type_registry)
+        timings['objects_npz'].append(time.perf_counter()-start)
+        start = time.perf_counter()
         write_json(out/f"meta_{k:03d}.json", meta)
+        timings['frame_json'].append(time.perf_counter()-start)
+        start = time.perf_counter()
         if cfg["save_dense"]:
             save_dense(out/f"labels_{k:03d}.npz", dense)
-        stride4 = _render_frame(objects, k, H, dict(cfg, stride=4))
+        timings['dense_npz'].append(time.perf_counter()-start)
+        del dense
+        start = time.perf_counter()
+        stride4 = _render_frame(objects, k, H, dict(cfg, stride=4), canvas=canvas)
+        timings['dense'].append(dense_time+time.perf_counter()-start)
         collisions += len(stride4["collision"])
         labeled += len(stride4["collision"])+len(stride4["retained"])+len(stride4["cropped"])
         cropped += len(stride4["cropped"])
+        del stride4
     meta = sequence_metadata(config, effective, rngs, camera, motion, sensor, psf,
                              photometry, plan.population, catalog, objects, derived_camera=derived_camera,
-                             provenance=provenance, split=split)
+                             provenance=provenance, split=split, canvas=union)
     meta["stride4_collisions"] = dict(count=collisions, labeled=labeled, cropped=cropped,
                                        rate=collisions/labeled if labeled else 0.0)
     write_json(out/"sequence.json", meta)
     if effective["labels"]["save_dense"]:
-        write_labels_manifest(out, out, effective["labels"], objects)
+        write_labels_manifest(out, out, effective["labels"], objects, canvas=canvas)
+    total = time.perf_counter()-generation_start
+    accounted = sum(sum(v) if isinstance(v, list) else v for v in timings.values())
+    timings['other'] = total-accounted
+    write_json(out/'timing.json', dict(seconds=timings, total_seconds=total,
+        clock='perf_counter', phase='write_sequence',
+        ranges=dict(other='phase total minus named operations; includes rendering exposures and manifests',
+                    fits='FITS writing call including compression',
+                    dense='configured stride plus stride 4; excludes writes'),
+        excludes='timing.json serialization itself'))
     return objects

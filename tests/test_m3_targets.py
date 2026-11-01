@@ -718,6 +718,7 @@ def camera():
     return Camera.from_derived(loaded.derived)
 
 
+@pytest.mark.slow
 def test_frame_of_5000_stars_and_50_targets_is_under_three_seconds(camera):
     """One frame of 5000 stars and 50 targets stays under 3 s.
 

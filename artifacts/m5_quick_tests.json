@@ -1,0 +1,20 @@
+{
+  "command": "conda run -n genstarimg --no-capture-output python -m pytest -m \"not slow\" -q --basetemp=.tmp/m5_d81_final --junitxml=.tmp/m5_d81_final.xml",
+  "passed": 564,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "deselected": 9,
+  "seconds": 659.062,
+  "started_at": "2026-11-01T06:57:42.199371-08:00",
+  "source_sha256": "df0d6901ea998ee980789ead853856e8ef8b4baf38fcab592dc713bf5f3534ef",
+  "source_files": 56,
+  "source_unchanged_during_run": true,
+  "junit_sha256": "bf7ae2ebcd1b227b38c1be7b325b1caaa3cc464a729a528c3e4e2b828d3b0c09",
+  "log_sha256": "0dd63a97f2417dec52753a2133a5bf48579842858cff0936c13af3e0233f8172",
+  "frozen_comparison": {
+    "command": "python -m tests.m5_baseline artifacts/m5_baseline.json --compare",
+    "passed": true,
+    "baseline_sha256": "bacfd9c6c2c1ee2832c3e6aaf421ea2b827e4a51491b1050090ed4771eb2051e"
+  }
+}

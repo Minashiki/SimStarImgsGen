@@ -29,6 +29,7 @@ from starsim.rng import SequenceRng, root_seed, sequence_seed
 from starsim.sequence import SEQUENCE_VERSION
 from starsim.targets import TARGETS_VERSION
 from starsim.labels import LABELS_VERSION
+from starsim.split import SPLIT_VERSION
 
 
 def algorithm_versions() -> dict:
@@ -36,7 +37,7 @@ def algorithm_versions() -> dict:
 
     Keys are the modules implemented so far: config sampling, motion,
     photometry, the PSF, rendering, noise, blending, targets, and the
-    frame loop, and labels. ``rng_scheme`` is carried only by ``SequenceRng.metadata()``.
+    frame loop, labels and sky splitting. ``rng_scheme`` is carried only by ``SequenceRng.metadata()``.
     Callers use this mapping directly; there is no nested
     ``algorithm_versions`` key.
 
@@ -63,6 +64,7 @@ def algorithm_versions() -> dict:
         "targets": TARGETS_VERSION,
         "sequence": SEQUENCE_VERSION,
         "labels": LABELS_VERSION,
+        "split": SPLIT_VERSION,
     }
 
 
@@ -77,6 +79,7 @@ __all__ = [
     "SEQUENCE_VERSION",
     "TARGETS_VERSION",
     "LABELS_VERSION",
+    "SPLIT_VERSION",
     "AppConfig",
     "Camera",
     "DerivedCamera",
